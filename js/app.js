@@ -881,14 +881,17 @@ class GymApp {
     })();
   }
 
-  async openAddRoutineModal(preClientId = null, editRoutineId = null) {
+  async openAddRoutineModal(preClientId = null, editRoutineId = null, isReopen = false) {
     const clients = await DB.getClientsByTrainer(this.user.id);
     let editing   = null;
     if (editRoutineId) {
       const all = await DB.getRoutinesByTrainer(this.user.id);
       editing   = all.find(r => r.id === editRoutineId) || null;
     }
-    this._builderExercises = editing ? [...editing.exercises] : [];
+    // Si es un re-open desde el selector de ejercicios, NO resetear la lista
+    if (!isReopen) {
+      this._builderExercises = editing ? [...editing.exercises] : [];
+    }
 
     const renderExList = () => this._builderExercises.map((ex,i) => {
       const m = getMuscleInfo(ex.muscleGroup);
@@ -1136,6 +1139,7 @@ class GymApp {
       await this.openAddRoutineModal(
         this._builderParams?.preClientId,
         this._builderParams?.editRoutineId,
+        true, // isReopen: conservar ejercicios ya añadidos
       );
       this._restoreBuilderFormState();
     };
