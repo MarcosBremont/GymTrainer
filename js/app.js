@@ -8,6 +8,10 @@ import {
   signInWithEmailAndPassword,
   signOut,
   createUserWithEmailAndPassword,
+  updateEmail,
+  updatePassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
 } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
 import {
   DB, uid, EXERCISE_LIBRARY, MEAL_SLOTS, DAYS_OF_WEEK,
@@ -274,14 +278,25 @@ class GymApp {
     this.navigate('dashboard');
   }
 
+  // Devuelve el HTML del avatar (foto si existe, sino emoji/inicial)
+  _avatarInnerHTML(u) {
+    if (u.photoBase64) {
+      return `<img src="${u.photoBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+    }
+    return u.avatar || u.name[0];
+  }
+
   renderShell() {
     const u         = this.user;
     const isTrainer = u.role === 'trainer';
 
-    document.getElementById('header-avatar').textContent = u.avatar || u.name[0];
-    document.getElementById('header-avatar').className   = `user-avatar ${u.color || 'avatar-purple'}`;
-    document.getElementById('sidebar-avatar').textContent = u.avatar || u.name[0];
-    document.getElementById('sidebar-avatar').className   = `sidebar-avatar ${u.color || 'avatar-purple'}`;
+    const hdr = document.getElementById('header-avatar');
+    hdr.innerHTML  = this._avatarInnerHTML(u);
+    hdr.className  = `user-avatar ${u.photoBase64 ? '' : (u.color || 'avatar-purple')}`;
+
+    const sba = document.getElementById('sidebar-avatar');
+    sba.innerHTML  = this._avatarInnerHTML(u);
+    sba.className  = `sidebar-avatar ${u.photoBase64 ? '' : (u.color || 'avatar-purple')}`;
     document.getElementById('sidebar-name').textContent   = u.name;
     document.getElementById('sidebar-role').textContent   = isTrainer
       ? `🏋️ Entrenador · ${u.gym || ''}`
@@ -1749,7 +1764,7 @@ class GymApp {
         <button class="btn btn-outline btn-sm" onclick="app.openEditProfileModal()">✏️ Editar</button>
       </div>
       <div class="profile-hero">
-        <div class="profile-big-avatar ${u.color||'avatar-purple'}">${u.avatar||u.name[0]}</div>
+        <div class="profile-big-avatar ${u.photoBase64 ? '' : (u.color||'avatar-purple')}">${this._avatarInnerHTML(u)}</div>
         <div class="profile-name">${u.name}</div>
         <div class="profile-email">${u.email}</div>
         <div class="profile-badges">
@@ -1785,12 +1800,53 @@ class GymApp {
   openEditProfileModal() {
     const u         = this.user;
     const isTrainer = u.role === 'trainer';
+    this._pendingPhoto = null; // reset pending photo
+
+    const currentAvatar = u.photoBase64
+      ? `<img src="${u.photoBase64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`
+      : (u.avatar || u.name[0]);
+
     this.openModal('Editar Perfil', `
       <form id="profile-form">
+
+        <!-- Foto de perfil -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:20px">
+          <div id="photo-preview"
+               class="${u.photoBase64 ? '' : (u.color||'avatar-purple')}"
+               style="width:90px;height:90px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;cursor:pointer;border:2px dashed var(--primary);overflow:hidden;position:relative;transition:all .2s"
+               onclick="document.getElementById('photo-input').click()">
+            ${currentAvatar}
+            <div style="position:absolute;inset:0;background:rgba(0,0,0,0.45);border-radius:50%;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s"
+                 onmouseenter="this.style.opacity=1" onmouseleave="this.style.opacity=0">
+              <span style="font-size:1.4rem">📷</span>
+            </div>
+          </div>
+          <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="app._handlePhotoUpload(this)"/>
+          <div style="display:flex;gap:8px">
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('photo-input').click()">📷 Cambiar foto</button>
+            ${u.photoBase64 ? `<button type="button" class="btn btn-danger btn-sm" onclick="app._clearPhoto()">🗑 Quitar foto</button>` : ''}
+          </div>
+          <p style="color:var(--text3);font-size:.75rem">Máx. 2MB · Se recorta en círculo automáticamente</p>
+        </div>
+
         <div class="form-row">
           <div class="form-group"><label>Nombre completo</label><input type="text" name="name" value="${u.name}" required/></div>
           <div class="form-group"><label>Teléfono</label><input type="tel" name="phone" value="${u.phone||''}"/></div>
         </div>
+
+        <!-- Cambio de email con re-autenticación -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:12px">
+          <div class="form-section-title" style="margin-top:0">📧 Cambiar correo electrónico</div>
+          <div class="form-group">
+            <label>Nuevo correo</label>
+            <input type="email" id="new-email" placeholder="${u.email}" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);width:100%"/>
+          </div>
+          <div class="form-group" style="margin-top:8px">
+            <label>Contraseña actual <span style="color:var(--text3)">(requerida para cambiar el email)</span></label>
+            <input type="password" id="email-current-pw" placeholder="••••••••" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px 12px;color:var(--text);width:100%"/>
+          </div>
+        </div>
+
         ${isTrainer ? `
           <div class="form-row">
             <div class="form-group"><label>Gimnasio</label><input type="text" name="gym" value="${u.gym||''}"/></div>
@@ -1806,7 +1862,13 @@ class GymApp {
           </div>
           <div class="form-group"><label>Objetivo</label><input type="text" name="goal" value="${u.goal||''}"/></div>
         `}
-        <div class="form-group"><label>Avatar (emoji)</label><input type="text" name="avatar" value="${u.avatar||''}" maxlength="4" placeholder="Ej: 💪"/></div>
+
+        <div class="form-group">
+          <label>Avatar (emoji) <span style="color:var(--text3)">— se usa si no hay foto</span></label>
+          <input type="text" name="avatar" value="${u.avatar||''}" maxlength="4" placeholder="Ej: 💪"/>
+        </div>
+
+        <p id="profile-err" class="form-error hidden"></p>
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" onclick="app.closeModal()">Cancelar</button>
           <button type="submit" class="btn btn-primary">💾 Guardar</button>
@@ -1815,28 +1877,134 @@ class GymApp {
 
     document.getElementById('profile-form').onsubmit = async e => {
       e.preventDefault();
-      const btn = e.target.querySelector('[type=submit]');
+      const btn    = e.target.querySelector('[type=submit]');
+      const errEl  = document.getElementById('profile-err');
       btn.disabled = true; btn.textContent = 'Guardando…';
-      const fd      = new FormData(e.target);
-      const updated = { ...this.user, ...Object.fromEntries(fd.entries()) };
+      errEl.classList.add('hidden');
+
+      const fd       = new FormData(e.target);
+      const newEmail = document.getElementById('new-email')?.value?.trim();
+      const currentPw = document.getElementById('email-current-pw')?.value;
+
       try {
+        // ── Cambio de email ──────────────────────────────
+        if (newEmail && newEmail !== u.email) {
+          if (!currentPw) {
+            errEl.textContent = 'Escribe tu contraseña actual para cambiar el email.';
+            errEl.classList.remove('hidden');
+            btn.disabled = false; btn.textContent = '💾 Guardar'; return;
+          }
+          // Re-autenticar primero
+          const cred = EmailAuthProvider.credential(u.email, currentPw);
+          await reauthenticateWithCredential(auth.currentUser, cred);
+          await updateEmail(auth.currentUser, newEmail);
+        }
+
+        // ── Actualizar Firestore ─────────────────────────
+        const updated = {
+          ...this.user,
+          ...Object.fromEntries(fd.entries()),
+          email: newEmail || u.email,
+          photoBase64: this._pendingPhoto !== null ? this._pendingPhoto : (u.photoBase64 || null),
+        };
         await DB.saveUser(updated);
         this.user = updated;
-        this.toast('Perfil actualizado');
+        this.toast('Perfil actualizado correctamente');
         this.closeModal();
         this.renderShell();
         this.navigate('perfil');
-      } catch(err) { this.toast(err.message,'error'); btn.disabled=false; btn.textContent='💾 Guardar'; }
+      } catch(err) {
+        const msgs = {
+          'auth/wrong-password':        'Contraseña actual incorrecta.',
+          'auth/requires-recent-login': 'Sesión expirada. Cierra sesión y vuelve a entrar.',
+          'auth/email-already-in-use':  'Ese correo ya está en uso por otra cuenta.',
+          'auth/invalid-email':         'El formato del correo no es válido.',
+        };
+        errEl.textContent = msgs[err.code] || err.message;
+        errEl.classList.remove('hidden');
+        btn.disabled = false; btn.textContent = '💾 Guardar';
+      }
     };
+  }
+
+  // Comprime la imagen seleccionada a 200×200 JPEG y la muestra en el preview
+  _handlePhotoUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { this.toast('La imagen es demasiado grande (máx. 2MB)', 'error'); return; }
+
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const SIZE = 200;
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = SIZE;
+        const ctx = canvas.getContext('2d');
+        // Recorte cuadrado centrado
+        const side = Math.min(img.width, img.height);
+        const sx   = (img.width  - side) / 2;
+        const sy   = (img.height - side) / 2;
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
+        const base64 = canvas.toDataURL('image/jpeg', 0.75);
+        this._pendingPhoto = base64;
+        // Actualizar preview
+        const preview = document.getElementById('photo-preview');
+        if (preview) {
+          preview.innerHTML = `<img src="${base64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%"/>`;
+          preview.className = '';
+        }
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  _clearPhoto() {
+    this._pendingPhoto = null; // null = borrar la foto guardada
+    const preview = document.getElementById('photo-preview');
+    if (preview) {
+      const u = this.user;
+      preview.className = u.color || 'avatar-purple';
+      preview.innerHTML = u.avatar || u.name[0];
+    }
   }
 
   openChangePasswordModal() {
     this.openModal('Cambiar Contraseña', `
-      <p style="color:var(--text2);font-size:.85rem;margin-bottom:16px">
-        Para cambiar la contraseña ve a <strong>Firebase Authentication</strong> en la consola, o implementa un flujo de re-autenticación.<br><br>
-        Alternativamente, cierra sesión y usa la opción "¿Olvidé mi contraseña?" en el login.
-      </p>
-      <div class="form-actions"><button class="btn btn-primary" onclick="app.closeModal()">Entendido</button></div>`);
+      <form id="pw-form">
+        <div class="form-group"><label>Contraseña actual</label><input type="password" id="pw-current" required/></div>
+        <div class="form-group"><label>Nueva contraseña</label><input type="password" id="pw-new" minlength="6" required/></div>
+        <div class="form-group"><label>Confirmar nueva contraseña</label><input type="password" id="pw-confirm" required/></div>
+        <p id="pw-err" class="form-error hidden"></p>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" onclick="app.closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Cambiar contraseña</button>
+        </div>
+      </form>`);
+
+    document.getElementById('pw-form').onsubmit = async e => {
+      e.preventDefault();
+      const btn     = e.target.querySelector('[type=submit]');
+      const errEl   = document.getElementById('pw-err');
+      const current = document.getElementById('pw-current').value;
+      const newPw   = document.getElementById('pw-new').value;
+      const confirm = document.getElementById('pw-confirm').value;
+      if (newPw !== confirm) { errEl.textContent = 'Las contraseñas no coinciden.'; errEl.classList.remove('hidden'); return; }
+      btn.disabled = true; btn.textContent = 'Guardando…';
+      try {
+        const cred = EmailAuthProvider.credential(this.user.email, current);
+        await reauthenticateWithCredential(auth.currentUser, cred);
+        await updatePassword(auth.currentUser, newPw);
+        this.toast('Contraseña actualizada');
+        this.closeModal();
+      } catch(err) {
+        const msgs = { 'auth/wrong-password': 'Contraseña actual incorrecta.', 'auth/weak-password': 'Mínimo 6 caracteres.' };
+        errEl.textContent = msgs[err.code] || err.message;
+        errEl.classList.remove('hidden');
+        btn.disabled = false; btn.textContent = 'Cambiar contraseña';
+      }
+    };
   }
 
   openAboutModal() {
