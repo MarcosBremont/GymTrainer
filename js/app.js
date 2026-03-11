@@ -854,13 +854,26 @@ class GymApp {
               <div class="exercise-thumb" style="background:${m.color};width:60px;height:60px;font-size:1.8rem">${m.icon}</div>
               <div class="exercise-info">
                 <div class="exercise-name" style="font-size:1rem">${ex.name}</div>
-                <div class="exercise-details">${m.label}</div>
-                <div class="exercise-stats">
-                  <span class="exercise-stat">${ex.sets} series</span><span class="exercise-stat">${ex.reps} reps</span>
-                  ${ex.weight?`<span class="exercise-stat">⚖️ ${ex.weight}</span>`:''}
-                  ${ex.rest?`<span class="exercise-stat">⏱ ${ex.rest}s</span>`:''}
-                </div>
-                ${ex.notes?`<div style="color:var(--text2);font-size:.78rem;margin-top:4px">💡 ${ex.notes}</div>`:''}
+                <div class="exercise-details">${m.label}${ex.rest ? ` · ⏱ ${ex.rest}s descanso` : ''}</div>
+                ${ex.setsData ? `
+                  <div style="margin-top:8px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+                    <div style="display:grid;grid-template-columns:40px 1fr 1fr;background:var(--bg2);padding:5px 8px;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">
+                      <span>Serie</span><span>Reps</span><span>Peso</span>
+                    </div>
+                    ${ex.setsData.map((s,si) => `
+                      <div style="display:grid;grid-template-columns:40px 1fr 1fr;padding:6px 8px;font-size:.85rem;border-top:1px solid rgba(255,255,255,0.04)">
+                        <span style="color:var(--primary);font-weight:700">${si+1}</span>
+                        <span>${s.reps || '–'}</span>
+                        <span style="font-weight:600">${s.weight || '–'}</span>
+                      </div>`).join('')}
+                  </div>
+                ` : `
+                  <div class="exercise-stats">
+                    <span class="exercise-stat">${ex.sets} series</span>
+                    <span class="exercise-stat">${ex.reps} reps</span>
+                    ${ex.weight ? `<span class="exercise-stat">⚖️ ${ex.weight}</span>` : ''}
+                  </div>`}
+                ${ex.notes ? `<div style="color:var(--text2);font-size:.78rem;margin-top:6px">💡 ${ex.notes}</div>` : ''}
               </div></div>`;
           }).join('')}
         </div>`;
@@ -880,7 +893,14 @@ class GymApp {
     const renderExList = () => this._builderExercises.map((ex,i) => {
       const m = getMuscleInfo(ex.muscleGroup);
       return `<div class="added-ex-item"><div class="exercise-thumb" style="background:${m.color};width:40px;height:40px;font-size:1.2rem;border-radius:8px">${m.icon}</div>
-        <div class="added-ex-info"><div class="added-ex-name">${ex.name}</div><div class="added-ex-params">${ex.sets}×${ex.reps} · ${ex.weight||'-'}</div></div>
+        <div class="added-ex-info">
+          <div class="added-ex-name">${ex.name}</div>
+          <div class="added-ex-params">${ex.sets} series · ${
+            ex.setsData
+              ? ex.setsData.map((s,i) => `<span style="color:var(--primary)">${i+1}:</span> ${s.reps||'?'} @ ${s.weight||'–'}`).join('  ')
+              : `${ex.reps} · ${ex.weight||'–'}`
+          }</div>
+        </div>
         <button class="btn btn-danger btn-sm" onclick="app._removeExFromBuilder(${i})">✕</button></div>`;
     }).join('');
 
@@ -1001,45 +1021,123 @@ class GymApp {
   openExerciseConfigModal(muscleGroup, exerciseId) {
     const g  = EXERCISE_LIBRARY[muscleGroup];
     const ex = g.exercises.find(e => e.id === exerciseId);
+
+    // Genera las filas de la tabla (una por serie)
+    const genRows = (n, defaultReps = ex.reps, defaultWeight = '') =>
+      Array.from({ length: n }, (_, i) => `
+        <tr>
+          <td style="padding:6px 10px;text-align:center;font-weight:700;color:var(--primary)">${i + 1}</td>
+          <td style="padding:4px 6px">
+            <input type="text" name="reps_${i+1}" value="${defaultReps}" placeholder="8-10"
+              style="width:80px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:7px 8px;color:var(--text);text-align:center"/>
+          </td>
+          <td style="padding:4px 6px">
+            <input type="text" name="weight_${i+1}" value="${defaultWeight}" placeholder="Ej: 30kg"
+              style="width:110px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:7px 8px;color:var(--text)"/>
+          </td>
+        </tr>`).join('');
+
     this.openModal(`Configurar: ${ex.name}`, `
-      <div style="margin-bottom:16px;padding:16px;background:${g.color};border-radius:var(--radius-sm);text-align:center">
-        <div style="font-size:3rem">${g.icon}</div>
-        <div style="font-weight:700;font-size:1.1rem;margin-top:6px">${ex.name}</div>
-        <div style="opacity:.85;font-size:.85rem">${g.label}</div>
-        ${ex.instructions?`<div style="margin-top:8px;font-size:.8rem;opacity:.9">${ex.instructions}</div>`:''}
+      <div style="margin-bottom:16px;padding:14px 16px;background:${g.color};border-radius:var(--radius-sm);text-align:center">
+        <div style="font-size:2.4rem">${g.icon}</div>
+        <div style="font-weight:700;font-size:1.05rem;margin-top:4px">${ex.name}</div>
+        <div style="opacity:.85;font-size:.82rem">${g.label}</div>
+        ${ex.instructions ? `<div style="margin-top:6px;font-size:.78rem;opacity:.85">${ex.instructions}</div>` : ''}
       </div>
       <form id="ex-config-form">
         <div class="form-row">
-          <div class="form-group"><label>Series</label><input type="number" name="sets" value="${ex.sets}" min="1" max="20" required/></div>
-          <div class="form-group"><label>Repeticiones</label><input type="text" name="reps" value="${ex.reps}" required/></div>
+          <div class="form-group">
+            <label>Número de series</label>
+            <input type="number" id="ex-sets-n" name="sets" value="${ex.sets}" min="1" max="20" required
+                   oninput="app._refreshSetsRows(this.value)"/>
+          </div>
+          <div class="form-group">
+            <label>Descanso entre series (seg)</label>
+            <input type="number" name="rest" value="${ex.rest}" min="0"/>
+          </div>
         </div>
-        <div class="form-row">
-          <div class="form-group"><label>Peso / Carga</label><input type="text" name="weight" placeholder="Ej: 50kg"/></div>
-          <div class="form-group"><label>Descanso (seg)</label><input type="number" name="rest" value="${ex.rest}" min="0"/></div>
+
+        <!-- Relleno rápido -->
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;background:var(--bg2);border-radius:var(--radius-sm);margin-bottom:12px">
+          <span style="font-size:.8rem;color:var(--text2);white-space:nowrap">Rellenar todas:</span>
+          <input type="text" id="fill-reps"   placeholder="Reps"  value="${ex.reps}"
+            style="width:72px;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:.85rem"/>
+          <input type="text" id="fill-weight" placeholder="Peso"
+            style="width:90px;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 8px;color:var(--text);font-size:.85rem"/>
+          <button type="button" class="btn btn-outline btn-sm" onclick="app._fillAllSets()">Aplicar →</button>
         </div>
-        <div class="form-group"><label>Notas específicas</label><input type="text" name="notes" placeholder="Instrucciones adicionales…"/></div>
+
+        <!-- Tabla serie a serie -->
+        <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:16px">
+          <table style="width:100%;border-collapse:collapse">
+            <thead style="background:var(--bg2)">
+              <tr style="color:var(--text2);font-size:.75rem;text-transform:uppercase;letter-spacing:.5px">
+                <th style="padding:8px 10px;text-align:center">Serie</th>
+                <th style="padding:8px 10px;text-align:left">Repeticiones</th>
+                <th style="padding:8px 10px;text-align:left">Peso / Carga</th>
+              </tr>
+            </thead>
+            <tbody id="sets-tbody">${genRows(ex.sets)}</tbody>
+          </table>
+        </div>
+
+        <div class="form-group">
+          <label>Notas específicas</label>
+          <input type="text" name="notes" placeholder="Instrucciones adicionales para este ejercicio…"/>
+        </div>
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" onclick="app.openExercisePickerModal()">← Volver</button>
           <button type="submit" class="btn btn-primary">+ Añadir a rutina</button>
         </div>
       </form>`, true);
 
+    // Actualiza filas al cambiar el número de series
+    this._refreshSetsRows = n => {
+      const num = Math.max(1, Math.min(20, parseInt(n) || 1));
+      document.getElementById('sets-tbody').innerHTML = genRows(num);
+    };
+
+    // Rellena todas las filas con los valores del relleno rápido
+    this._fillAllSets = () => {
+      const reps   = document.getElementById('fill-reps')?.value  || '';
+      const weight = document.getElementById('fill-weight')?.value || '';
+      const n      = parseInt(document.getElementById('ex-sets-n')?.value) || 1;
+      for (let i = 1; i <= n; i++) {
+        const ri = document.querySelector(`[name="reps_${i}"]`);
+        const wi = document.querySelector(`[name="weight_${i}"]`);
+        if (ri && reps)   ri.value = reps;
+        if (wi && weight) wi.value = weight;
+      }
+    };
+
     document.getElementById('ex-config-form').onsubmit = async e => {
       e.preventDefault();
-      const fd = new FormData(e.target);
+      const fd   = new FormData(e.target);
+      const sets = parseInt(fd.get('sets')) || 1;
+
+      // Recoge datos por serie
+      const setsData = Array.from({ length: sets }, (_, i) => ({
+        reps:   fd.get(`reps_${i+1}`)   || '',
+        weight: fd.get(`weight_${i+1}`) || '',
+      }));
+
       this._builderExercises.push({
         id: uid(), exerciseId, name: ex.name, muscleGroup,
-        sets: parseInt(fd.get('sets')), reps: fd.get('reps'),
-        weight: fd.get('weight'), rest: parseInt(fd.get('rest')),
-        notes: fd.get('notes'),
+        sets,
+        setsData,
+        // Campos planos (resumen) para la vista rápida de cards
+        reps:   [...new Set(setsData.map(s => s.reps).filter(Boolean))].join(' / '),
+        weight: setsData.map(s => s.weight || '–').join(' / '),
+        rest:   parseInt(fd.get('rest')) || 0,
+        notes:  fd.get('notes') || '',
       });
+
       this.toast('✅ Ejercicio añadido');
-      // Reabrir el builder (el modal fue reemplazado, ex-builder-list ya no existe en el DOM)
       await this.openAddRoutineModal(
         this._builderParams?.preClientId,
         this._builderParams?.editRoutineId,
       );
-      this._restoreBuilderFormState(); // restaurar nombre, cliente, días y notas
+      this._restoreBuilderFormState();
     };
   }
 
