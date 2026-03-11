@@ -6,8 +6,9 @@ Set objFile = objFSO.OpenTextFile("tools\generate_exercises.py", ForReading)
 strText = objFile.ReadAll
 objFile.Close
 
-lines = Split(strText, vbCrLf)
-currentCategory = ""
+' Convert all newlines to vbLf for consistent splitting
+strText = Replace(strText, vbCrLf, vbLf)
+lines = Split(strText, vbLf)
 
 Set dictCats = CreateObject("Scripting.Dictionary")
 dictCats.Add "Pecho", "pecho"
@@ -58,6 +59,7 @@ For i = 0 To 6
 Next
 
 Function GetCatIndex(cat)
+    GetCatIndex = -1
     Select Case cat
         Case "pecho" GetCatIndex = 0
         Case "espalda" GetCatIndex = 1
@@ -68,6 +70,8 @@ Function GetCatIndex(cat)
         Case "cardio" GetCatIndex = 6
     End Select
 End Function
+
+currentCategory = ""
 
 For Each line In lines
     line = Trim(line)
@@ -94,7 +98,9 @@ For Each line In lines
                 exStr = vbTab & vbTab & "{ id: '" & exId & "', name: '" & Replace(exName, "'", "\'") & "', sets: " & sets & ", reps: " & reps & ", rest: " & rest & ", instructions: '' }," & vbCrLf
                 
                 catIdx = GetCatIndex(currentCategory)
-                exercisesArr(catIdx) = exercisesArr(catIdx) & exStr
+                If catIdx >= 0 Then
+                    exercisesArr(catIdx) = exercisesArr(catIdx) & exStr
+                End If
             End If
         End If
     End If
@@ -114,4 +120,4 @@ Set objOutFile = objFSO.CreateTextFile("tools\output_library.js", True, True) ' 
 objOutFile.Write outputStr
 objOutFile.Close
 
-WScript.Echo "JSON generated"
+WScript.Echo "JSON generated lines processed: " & UBound(lines)
