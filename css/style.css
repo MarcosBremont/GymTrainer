@@ -1112,7 +1112,7 @@ ul { list-style: none; }
   .sidebar { left: 0; }
   .sidebar-overlay { display: none !important; }
   .bottom-nav { display: none; }
-  .menu-btn { display: none; }
+  #menu-btn { display: none; }
 
   .stats-grid { grid-template-columns: repeat(4, 1fr); }
   .form-row { grid-template-columns: 1fr 1fr; }
