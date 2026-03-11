@@ -23,13 +23,6 @@ function togglePassword(id) {
   el.type = el.type === 'password' ? 'text' : 'password';
 }
 
-async function demoLogin(email, pass) {
-  document.getElementById('login-email').value    = email;
-  document.getElementById('login-password').value = pass;
-  document.querySelector('[data-tab="login"]').click();
-  document.getElementById('login-form').dispatchEvent(new Event('submit'));
-}
-
 function formatDate(dateStr) {
   if (!dateStr) return '-';
   return new Date(dateStr + 'T12:00:00').toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -51,23 +44,19 @@ function getMuscleInfo(group) { return EXERCISE_LIBRARY[group] || { label: group
 // ── GymApp ───────────────────────────────────────────
 class GymApp {
   constructor() {
-    this.user            = null;
-    this.view            = 'dashboard';
-    this.viewParams      = {};
-    this.charts          = {};
-    this.deferredInstall = null;
+    this.user              = null;
+    this.view              = 'dashboard';
+    this.viewParams        = {};
+    this.charts            = {};
+    this.deferredInstall   = null;
     this._builderExercises = [];
+    this._registering      = false; // evita que onAuthStateChanged interfiera al registrar
     this.init();
   }
 
   // ── Init ───────────────────────────────────────────
   async init() {
     this.showInitLoader();
-    try {
-      await DB.initDemoData();   // create demo accounts in Firebase (only first time)
-    } catch (e) {
-      console.warn('Demo init skipped:', e.message);
-    }
     this.setupPWA();
     this.setupAuthListeners();
     this.setupOnAuthStateChanged();
@@ -132,10 +121,95 @@ class GymApp {
       const pass  = document.getElementById('login-password').value;
       this.login(email, pass);
     });
+
+    document.getElementById('register-form').addEventListener('submit', e => {
+      e.preventDefault();
+      this.register();
+    });
+  }
+
+  // ── Registro nuevo usuario ─────────────────────────
+  async onRegRoleChange(role) {
+    const group  = document.getElementById('reg-trainer-group');
+    const select = document.getElementById('reg-trainer');
+    if (role === 'client') {
+      group.classList.remove('hidden');
+      select.innerHTML = '<option value="">Cargando entrenadores…</option>';
+      try {
+        const trainers = await DB.getTrainers();
+        if (!trainers.length) {
+          select.innerHTML = '<option value="">No hay entrenadores registrados aún</option>';
+        } else {
+          select.innerHTML =
+            '<option value="">Selecciona tu entrenador…</option>' +
+            trainers.map(t => `<option value="${t.id}">${t.name}${t.gym ? ' · ' + t.gym : ''}</option>`).join('');
+        }
+      } catch {
+        select.innerHTML = '<option value="">Error al cargar. Reintenta.</option>';
+      }
+    } else {
+      group.classList.add('hidden');
+    }
+  }
+
+  async register() {
+    const name      = document.getElementById('reg-name').value.trim();
+    const email     = document.getElementById('reg-email').value.trim();
+    const password  = document.getElementById('reg-password').value;
+    const role      = document.getElementById('reg-role').value;
+    const trainerId = document.getElementById('reg-trainer')?.value || null;
+    const errEl     = document.getElementById('reg-error');
+    const btn       = document.querySelector('#register-form button[type=submit]');
+
+    errEl.classList.add('hidden');
+
+    if (!role) {
+      errEl.textContent = 'Selecciona si eres entrenador o cliente.';
+      errEl.classList.remove('hidden'); return;
+    }
+    if (role === 'client' && !trainerId) {
+      errEl.textContent = 'Debes seleccionar tu entrenador.';
+      errEl.classList.remove('hidden'); return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Creando cuenta…';
+
+    try {
+      this._registering = true;
+      const cred   = await createUserWithEmailAndPassword(auth, email, password);
+      const userId = cred.user.uid;
+
+      const userData = {
+        id: userId, role, name, email, phone: '',
+        avatar: role === 'trainer' ? '🏋️' : '💪',
+        color: randomColor(),
+        joinDate: todayStr(), active: true,
+        ...(role === 'trainer'
+          ? { gym: '', specialty: '', experience: '' }
+          : { trainerId, goal: '', level: 'Principiante', age: null }),
+      };
+
+      await DB.saveUser(userData);
+      this._registering = false;
+      this.hideInitLoader();
+      this.toast('¡Cuenta creada correctamente!');
+      this.startApp(userData);
+    } catch (e) {
+      this._registering = false;
+      const msgs = {
+        'auth/email-already-in-use': 'Ese email ya está registrado. Inicia sesión.',
+        'auth/weak-password':        'La contraseña debe tener al menos 6 caracteres.',
+        'auth/invalid-email':        'El formato del email no es válido.',
+      };
+      errEl.textContent = msgs[e.code] || e.message;
+      errEl.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = 'Crear cuenta';
+    }
   }
 
   setupOnAuthStateChanged() {
     onAuthStateChanged(auth, async firebaseUser => {
+      if (this._registering) return; // el flujo de registro lo maneja register()
       this.hideInitLoader();
       if (firebaseUser) {
         const userData = await DB.getUser(firebaseUser.uid);
@@ -1487,5 +1561,4 @@ class GymApp {
 
 // ── Bootstrap ─────────────────────────────────────────
 window.app            = new GymApp();
-window.demoLogin      = demoLogin;
 window.togglePassword = togglePassword;

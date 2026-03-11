@@ -20,14 +20,14 @@ service cloud.firestore {
     }
 
     // ── Colección: users ────────────────────────────
-    // • Cualquier usuario autenticado puede leer perfiles
-    //   (el entrenador necesita leer los docs de sus clientes)
-    // • Sólo el propio usuario puede escribir su perfil
-    // • Se permite crear docs nuevos (cuando el entrenador da de alta un cliente)
+    // • Lectura pública: necesaria para listar entrenadores en el formulario de registro
+    //   (antes de que el cliente tenga cuenta)
+    // • Sólo el propio usuario puede editar/borrar su perfil
+    // • Crear: cualquiera autenticado (trainer crea docs de clientes)
     match /users/{userId} {
-      allow read:   if isAuth();
-      allow create: if isAuth();                     // el entrenador crea docs de clientes
-      allow update: if isAuth() && isOwn(userId);   // sólo tú editas tu perfil
+      allow read:   if true;                         // perfiles de entrenadores son públicos
+      allow create: if isAuth();
+      allow update: if isAuth() && isOwn(userId);
       allow delete: if isAuth() && isOwn(userId);
     }
 

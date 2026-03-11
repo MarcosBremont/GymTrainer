@@ -137,6 +137,12 @@ export class DB {
     await deleteDoc(doc(db, 'users', id));
   }
 
+  static async getTrainers() {
+    const q    = query(collection(db, 'users'), where('role', '==', 'trainer'));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  }
+
   static async getClientsByTrainer(trainerId) {
     const q = query(
       collection(db, 'users'),

@@ -31,7 +31,7 @@
       <div class="auth-card">
         <div class="auth-tabs">
           <button class="auth-tab active" data-tab="login">Iniciar Sesión</button>
-          <button class="auth-tab" data-tab="demo">Accesos Demo</button>
+          <button class="auth-tab" data-tab="register">Crear Cuenta</button>
         </div>
 
         <!-- Login Tab -->
@@ -53,35 +53,41 @@
           </form>
         </div>
 
-        <!-- Demo Tab -->
-        <div id="tab-demo" class="tab-content">
-          <p class="demo-info">Credenciales de demostración para explorar la app:</p>
-          <div class="demo-cards">
-            <div class="demo-card" onclick="demoLogin('trainer@gym.com','gym123')">
-              <span class="demo-avatar">🏋️</span>
-              <div>
-                <strong>Entrenador</strong>
-                <small>trainer@gym.com / gym123</small>
-              </div>
-              <span class="demo-arrow">→</span>
+        <!-- Register Tab -->
+        <div id="tab-register" class="tab-content">
+          <form id="register-form" class="auth-form">
+            <div class="form-group">
+              <label>Nombre completo *</label>
+              <input type="text" id="reg-name" placeholder="Tu nombre completo" autocomplete="name" required/>
             </div>
-            <div class="demo-card" onclick="demoLogin('juan@gmail.com','gym123')">
-              <span class="demo-avatar">💪</span>
-              <div>
-                <strong>Juan (Cliente)</strong>
-                <small>juan@gmail.com / gym123</small>
-              </div>
-              <span class="demo-arrow">→</span>
+            <div class="form-group">
+              <label>Correo electrónico *</label>
+              <input type="email" id="reg-email" placeholder="correo@ejemplo.com" autocomplete="email" required/>
             </div>
-            <div class="demo-card" onclick="demoLogin('maria@gmail.com','gym123')">
-              <span class="demo-avatar">🧘</span>
-              <div>
-                <strong>María (Cliente)</strong>
-                <small>maria@gmail.com / gym123</small>
+            <div class="form-group">
+              <label>Contraseña *</label>
+              <div class="password-wrap">
+                <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" minlength="6" autocomplete="new-password" required/>
+                <button type="button" class="toggle-pw" onclick="togglePassword('reg-password')">👁</button>
               </div>
-              <span class="demo-arrow">→</span>
             </div>
-          </div>
+            <div class="form-group">
+              <label>Soy... *</label>
+              <select id="reg-role" required onchange="app.onRegRoleChange(this.value)">
+                <option value="">Seleccionar tipo de cuenta…</option>
+                <option value="trainer">🏋️ Entrenador / Trainer</option>
+                <option value="client">💪 Cliente</option>
+              </select>
+            </div>
+            <div id="reg-trainer-group" class="form-group hidden">
+              <label>Mi entrenador *</label>
+              <select id="reg-trainer">
+                <option value="">Selecciona tu rol primero…</option>
+              </select>
+            </div>
+            <p id="reg-error" class="form-error hidden"></p>
+            <button type="submit" class="btn btn-primary btn-full">Crear cuenta</button>
+          </form>
         </div>
       </div>
 
