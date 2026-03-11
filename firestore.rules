@@ -1,0 +1,70 @@
+rules_version = '2';
+
+// =====================================================
+// GymTrainer Pro – Firestore Security Rules
+// Pega estas reglas en:
+//   Firebase Console → Firestore → Rules
+// =====================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Función helper: comprueba si el usuario está autenticado
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Función helper: comprueba si el documento pertenece al usuario
+    function isOwn(uid) {
+      return request.auth.uid == uid;
+    }
+
+    // ── Colección: users ────────────────────────────
+    // • Cualquier usuario autenticado puede leer perfiles
+    //   (el entrenador necesita leer los docs de sus clientes)
+    // • Sólo el propio usuario puede escribir su perfil
+    // • Se permite crear docs nuevos (cuando el entrenador da de alta un cliente)
+    match /users/{userId} {
+      allow read:   if isAuth();
+      allow create: if isAuth();                     // el entrenador crea docs de clientes
+      allow update: if isAuth() && isOwn(userId);   // sólo tú editas tu perfil
+      allow delete: if isAuth() && isOwn(userId);
+    }
+
+    // ── Colección: routines ─────────────────────────
+    // • El entrenador puede leer/escribir/borrar las suyas
+    // • El cliente puede leer sus rutinas asignadas
+    match /routines/{docId} {
+      allow read:   if isAuth()
+                    && (resource.data.trainerId == request.auth.uid
+                        || resource.data.clientId == request.auth.uid);
+      allow create: if isAuth();
+      allow update: if isAuth() && resource.data.trainerId == request.auth.uid;
+      allow delete: if isAuth() && resource.data.trainerId == request.auth.uid;
+    }
+
+    // ── Colección: mealPlans ────────────────────────
+    match /mealPlans/{docId} {
+      allow read:   if isAuth()
+                    && (resource.data.trainerId == request.auth.uid
+                        || resource.data.clientId == request.auth.uid);
+      allow create: if isAuth();
+      allow update: if isAuth() && resource.data.trainerId == request.auth.uid;
+      allow delete: if isAuth() && resource.data.trainerId == request.auth.uid;
+    }
+
+    // ── Colección: measurements ─────────────────────
+    // • El cliente puede leer y crear las suyas propias
+    // • El entrenador también puede leer/crear para sus clientes
+    match /measurements/{docId} {
+      allow read:   if isAuth()
+                    && (resource.data.clientId == request.auth.uid
+                        || exists(/databases/$(database)/documents/users/$(resource.data.clientId))
+                           && get(/databases/$(database)/documents/users/$(resource.data.clientId)).data.trainerId == request.auth.uid);
+      allow create: if isAuth();
+      allow delete: if isAuth()
+                    && (resource.data.clientId == request.auth.uid
+                        || get(/databases/$(database)/documents/users/$(resource.data.clientId)).data.trainerId == request.auth.uid);
+    }
+  }
+}
