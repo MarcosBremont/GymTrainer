@@ -85,6 +85,17 @@ class GymApp {
     document.getElementById('init-loader')?.remove();
   }
 
+  // ── SIDEBAR ──────────────────────────────────────────
+  toggleSidebar() {
+    document.getElementById('sidebar')?.classList.toggle('open');
+    document.getElementById('sidebar-overlay')?.classList.toggle('hidden');
+  }
+
+  closeSidebar() {
+    document.getElementById('sidebar')?.classList.remove('open');
+    document.getElementById('sidebar-overlay')?.classList.add('hidden');
+  }
+
   // ── PWA ────────────────────────────────────────────
   setupPWA() {
     if ('serviceWorker' in navigator) {
