@@ -8,7 +8,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   createUserWithEmailAndPassword,
-  updateEmail,
+  verifyBeforeUpdateEmail,
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
@@ -1897,7 +1897,9 @@ class GymApp {
           // Re-autenticar primero
           const cred = EmailAuthProvider.credential(u.email, currentPw);
           await reauthenticateWithCredential(auth.currentUser, cred);
-          await updateEmail(auth.currentUser, newEmail);
+          await verifyBeforeUpdateEmail(auth.currentUser, newEmail);
+          
+          this.toast('Se ha enviado un correo de verificación a la nueva dirección. Confímalo para aplicar el cambio.', 'info');
         }
 
         // ── Actualizar Firestore ─────────────────────────
