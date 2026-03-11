@@ -102,11 +102,11 @@ export const EXERCISE_LIBRARY = {
 };
 
 export const MEAL_SLOTS = [
-  { key: 'desayuno',    label: 'Desayuno',      icon: '☀️', time: '07:00-08:00' },
-  { key: 'mediaManana', label: 'Media Mañana',  icon: '🍎', time: '10:00-11:00' },
-  { key: 'almuerzo',    label: 'Almuerzo',      icon: '🍽️', time: '13:00-14:30' },
-  { key: 'merienda',    label: 'Merienda',      icon: '🥜', time: '17:00-18:00' },
-  { key: 'cena',        label: 'Cena',          icon: '🌙', time: '20:00-21:00' },
+  { key: 'desayuno',    label: 'Desayuno',      icon: '☀️', time: '7:00 - 8:00 AM'  },
+  { key: 'mediaManana', label: 'Media Mañana',  icon: '🍎', time: '10:00 - 11:00 AM' },
+  { key: 'almuerzo',    label: 'Almuerzo',      icon: '🍽️', time: '1:00 - 2:30 PM'  },
+  { key: 'merienda',    label: 'Merienda',      icon: '🥜', time: '5:00 - 6:00 PM'  },
+  { key: 'cena',        label: 'Cena',          icon: '🌙', time: '8:00 - 9:00 PM'  },
 ];
 
 export const DAYS_OF_WEEK = [

@@ -419,8 +419,7 @@ class GymApp {
     document.getElementById('modal-overlay').classList.remove('hidden');
     document.getElementById('modal-box').style.maxWidth = wide ? '700px' : '';
   }
-  closeModal(e) {
-    if (e && e.target !== document.getElementById('modal-overlay')) return;
+  closeModal() {
     document.getElementById('modal-overlay').classList.add('hidden');
   }
   showNotifications() {
