@@ -1254,49 +1254,196 @@ class GymApp {
 
   async openAddMealPlanModal(preClientId = null) {
     const clients = await DB.getClientsByTrainer(this.user.id);
+    if (!clients.length) { this.toast('Primero añade un cliente', 'error'); return; }
+
+    // ── Estado interno del plan ──────────────────────
+    const emptyMeal = () => ({ name: '', calories: 0, protein: 0, carbs: 0, fat: 0, foods: [] });
+    const emptyDay  = () => MEAL_SLOTS.reduce((o, s) => ({ ...o, [s.key]: emptyMeal() }), {});
+    this._mealPlanData  = { days: DAYS_OF_WEEK.reduce((o, d) => ({ ...o, [d.key]: emptyDay() }), {}) };
+    this._activeMealDay = 'lunes';
+
+    // ── Fila de alimento dinámica ────────────────────
+    const foodRow = (slotKey, val = '') => `
+      <div class="food-row" style="display:flex;gap:6px;align-items:center">
+        <input type="text" data-food-slot="${slotKey}" value="${val}"
+          placeholder="Ej: Avena 80g, Leche desnatada 200ml…"
+          style="flex:1;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 10px;color:var(--text);font-size:.85rem"/>
+        <button type="button" onclick="this.closest('.food-row').remove()"
+          style="background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.3);border-radius:6px;padding:6px 10px;color:var(--accent);cursor:pointer;font-size:.82rem;white-space:nowrap">✕</button>
+      </div>`;
+
+    // ── Renderiza el editor de un día ────────────────
+    const renderDay = (dayKey) => {
+      const day = this._mealPlanData.days[dayKey];
+      return MEAL_SLOTS.map(slot => {
+        const m = day[slot.key];
+        return `
+          <div style="border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;margin-bottom:8px">
+            <div onclick="app._toggleMealCard('${slot.key}')"
+                 style="display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;background:var(--bg2);user-select:none">
+              <span style="font-size:1.2rem">${slot.icon}</span>
+              <span style="font-weight:700;flex:1">${slot.label}</span>
+              <span style="color:var(--text3);font-size:.75rem">${slot.time}</span>
+              ${m.calories ? `<span style="color:var(--yellow);font-size:.75rem;font-weight:700">${m.calories} kcal</span>` : ''}
+              <span id="mcarrow-${slot.key}" style="color:var(--text3);font-size:.8rem">▼</span>
+            </div>
+            <div id="mcbody-${slot.key}" style="display:none;padding:14px;background:var(--card2);display:none">
+              <div class="form-group" style="margin-bottom:10px">
+                <input type="text" id="mc-name-${slot.key}" value="${m.name}"
+                  placeholder="Nombre de esta comida (ej: Desayuno proteico)"
+                  style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;color:var(--text)"/>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
+                ${[
+                  ['mc-cal',  'Kcal',     m.calories, 'var(--yellow)'],
+                  ['mc-prot', 'Prot. (g)', m.protein,  'var(--green)' ],
+                  ['mc-carb', 'Carb. (g)', m.carbs,    'var(--orange)'],
+                  ['mc-fat',  'Grasa (g)', m.fat,      'var(--pink)'  ],
+                ].map(([id, lbl, val, color]) => `
+                  <div style="text-align:center">
+                    <div style="font-size:.68rem;color:var(--text2);margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px">${lbl}</div>
+                    <input type="number" id="${id}-${slot.key}" value="${val || ''}" min="0"
+                      style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:6px 4px;color:${color};font-weight:700;text-align:center;font-size:.9rem"/>
+                  </div>`).join('')}
+              </div>
+              <div style="font-size:.75rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px">🥦 Alimentos</div>
+              <div id="mc-foods-${slot.key}" style="display:flex;flex-direction:column;gap:6px">
+                ${(m.foods || []).map(f => foodRow(slot.key, f)).join('')}
+              </div>
+              <button type="button" onclick="app._addMealFood('${slot.key}')"
+                style="margin-top:8px;width:100%;padding:8px;border:1px dashed var(--border);border-radius:6px;color:var(--primary);font-size:.83rem;cursor:pointer;background:rgba(108,99,255,.06);transition:all .2s">
+                + Añadir alimento
+              </button>
+            </div>
+          </div>`;
+      }).join('');
+    };
+
+    this._renderMealDay = renderDay;
+    this._mealFoodRow   = foodRow;
+
+    // ── HTML del modal ───────────────────────────────
     const html = `
-      <form id="meal-form">
+      <div style="display:flex;flex-direction:column;gap:12px">
         <div class="form-row">
-          <div class="form-group"><label>Nombre del plan *</label><input type="text" name="name" placeholder="Ej: Plan Volumen Semana 1" required/></div>
-          <div class="form-group"><label>Cliente *</label>
-            <select name="clientId" required>
+          <div class="form-group">
+            <label>Nombre del plan *</label>
+            <input type="text" id="mplan-name" placeholder="Ej: Plan Volumen Semana 1"
+              style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text)"/>
+          </div>
+          <div class="form-group">
+            <label>Cliente *</label>
+            <select id="mplan-client"
+              style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text)">
               <option value="">Seleccionar…</option>
-              ${clients.map(c=>`<option value="${c.id}" ${preClientId===c.id?'selected':''}>${c.name}</option>`).join('')}
+              ${clients.map(c => `<option value="${c.id}" ${preClientId === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
             </select>
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Calorías totales/día</label><input type="number" name="totalCalories" placeholder="Ej: 2500"/></div>
-          <div class="form-group"><label>Notas</label><input type="text" name="notes" placeholder="Instrucciones generales…"/></div>
+          <div class="form-group">
+            <label>Calorías objetivo/día</label>
+            <input type="number" id="mplan-cal" placeholder="Ej: 2500"
+              style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text)"/>
+          </div>
+          <div class="form-group">
+            <label>Notas generales</label>
+            <input type="text" id="mplan-notes" placeholder="Instrucciones, observaciones…"
+              style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text)"/>
+          </div>
         </div>
-        <p style="color:var(--text2);font-size:.82rem;margin-top:8px">💡 Tras crear el plan podrás ver sus comidas pulsando "Ver".</p>
+
+        <div style="font-size:.78rem;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.4px">📅 Comidas por día</div>
+
+        <div class="days-tabs" id="mplan-day-tabs" style="border-bottom:1px solid var(--border);margin-bottom:0">
+          ${DAYS_OF_WEEK.map(d =>
+            `<div class="day-tab mplan-day-tab ${d.key === 'lunes' ? 'active' : ''}" data-day="${d.key}"
+                  onclick="app._switchMealPlanDay('${d.key}')">${d.short} ${d.label}</div>`
+          ).join('')}
+        </div>
+
+        <div id="meal-day-editor" style="max-height:380px;overflow-y:auto;padding-right:4px">
+          ${renderDay('lunes')}
+        </div>
+
+        <p id="mplan-err" class="form-error hidden"></p>
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" onclick="app.closeModal()">Cancelar</button>
-          <button type="submit" class="btn btn-primary">💾 Crear plan</button>
+          <button type="button" class="btn btn-primary" id="mplan-save-btn" onclick="app._saveMealPlanFromBuilder()">💾 Guardar plan</button>
         </div>
-      </form>`;
-    this.openModal('Nuevo Plan Nutricional', html, true);
+      </div>`;
 
-    document.getElementById('meal-form').onsubmit = async e => {
-      e.preventDefault();
-      const btn = e.target.querySelector('[type=submit]');
-      btn.disabled = true; btn.textContent = 'Guardando…';
-      const fd       = new FormData(e.target);
-      const clientId = fd.get('clientId');
-      if (!clientId) { this.toast('Selecciona un cliente', 'error'); btn.disabled=false; btn.textContent='💾 Crear plan'; return; }
-      const emptySlot = () => ({ name:'', calories:0, protein:0, carbs:0, fat:0, foods:[] });
-      const emptyDay  = () => MEAL_SLOTS.reduce((o,s) => ({...o, [s.key]: emptySlot()}), {});
-      try {
-        await DB.saveMealPlan({
-          id: null, name: fd.get('name'), clientId, trainerId: this.user.id,
-          totalCalories: parseInt(fd.get('totalCalories'))||0, notes: fd.get('notes'),
-          days: { lunes: emptyDay(), martes: emptyDay(), miercoles: emptyDay(), jueves: emptyDay(), viernes: emptyDay(), sabado: emptyDay(), domingo: emptyDay() },
-        });
-        this.toast('Plan nutricional creado');
-        this.closeModal();
-        this.view === 'client-detail' ? this.navigate('client-detail', {clientId}) : this.navigate('nutricion');
-      } catch(err) { this.toast(err.message,'error'); btn.disabled=false; btn.textContent='💾 Crear plan'; }
-    };
+    this.openModal('Nuevo Plan Nutricional', html, true);
+  }
+
+  // ── Helpers del builder de nutrición ──────────────
+
+  _toggleMealCard(slotKey) {
+    const body  = document.getElementById(`mcbody-${slotKey}`);
+    const arrow = document.getElementById(`mcarrow-${slotKey}`);
+    if (!body) return;
+    const isOpen = body.style.display !== 'none';
+    body.style.display  = isOpen ? 'none' : 'block';
+    if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
+  }
+
+  _addMealFood(slotKey) {
+    document.getElementById(`mc-foods-${slotKey}`)
+      ?.insertAdjacentHTML('beforeend', this._mealFoodRow(slotKey));
+  }
+
+  _saveMealDayToState(dayKey) {
+    if (!this._mealPlanData) return;
+    const day = this._mealPlanData.days[dayKey];
+    MEAL_SLOTS.forEach(slot => {
+      const foods = [...document.querySelectorAll(`[data-food-slot="${slot.key}"]`)]
+        .map(i => i.value.trim()).filter(Boolean);
+      day[slot.key] = {
+        name:     document.getElementById(`mc-name-${slot.key}`)?.value?.trim()  || '',
+        calories: parseInt(document.getElementById(`mc-cal-${slot.key}`)?.value)  || 0,
+        protein:  parseInt(document.getElementById(`mc-prot-${slot.key}`)?.value) || 0,
+        carbs:    parseInt(document.getElementById(`mc-carb-${slot.key}`)?.value) || 0,
+        fat:      parseInt(document.getElementById(`mc-fat-${slot.key}`)?.value)  || 0,
+        foods,
+      };
+    });
+  }
+
+  _switchMealPlanDay(newDayKey) {
+    this._saveMealDayToState(this._activeMealDay);
+    this._activeMealDay = newDayKey;
+    document.querySelectorAll('.mplan-day-tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.day === newDayKey));
+    document.getElementById('meal-day-editor').innerHTML = this._renderMealDay(newDayKey);
+  }
+
+  async _saveMealPlanFromBuilder() {
+    this._saveMealDayToState(this._activeMealDay);
+    const name     = document.getElementById('mplan-name')?.value?.trim();
+    const clientId = document.getElementById('mplan-client')?.value;
+    const cal      = parseInt(document.getElementById('mplan-cal')?.value)   || 0;
+    const notes    = document.getElementById('mplan-notes')?.value?.trim()   || '';
+    const errEl    = document.getElementById('mplan-err');
+    const btn      = document.getElementById('mplan-save-btn');
+
+    if (!name)     { errEl.textContent = 'Escribe un nombre para el plan.'; errEl.classList.remove('hidden'); return; }
+    if (!clientId) { errEl.textContent = 'Selecciona un cliente.';          errEl.classList.remove('hidden'); return; }
+
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      await DB.saveMealPlan({
+        id: null, name, clientId, trainerId: this.user.id,
+        totalCalories: cal, notes, days: this._mealPlanData.days,
+      });
+      this.toast('Plan nutricional guardado');
+      this.closeModal();
+      this.view === 'client-detail'
+        ? this.navigate('client-detail', { clientId })
+        : this.navigate('nutricion');
+    } catch (err) {
+      errEl.textContent = err.message; errEl.classList.remove('hidden');
+      btn.disabled = false; btn.textContent = '💾 Guardar plan';
+    }
   }
 
   async confirmDeleteMealPlan(planId, clientId) {
