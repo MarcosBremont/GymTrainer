@@ -331,6 +331,8 @@ class GymApp {
         { view: 'clientes',  icon: '👥', label: 'Clientes'  },
         { view: 'rutinas',   icon: '📋', label: 'Rutinas'   },
         { view: 'nutricion', icon: '🥗', label: 'Nutrición' },
+        { view: 'medidas',   icon: '📏', label: 'Medidas'    },
+        { view: 'progreso',  icon: '📈', label: 'Progreso'   },
         { view: 'perfil',    icon: '👤', label: 'Perfil'    },
       );
     } else {
@@ -554,18 +556,19 @@ class GymApp {
   // ════════════════════════════════════════════════════
   // CLIENTS
   // ════════════════════════════════════════════════════
-  clientCardHTML(c, routineCount = 0, lastMeasureWeight = null) {
+  clientCardHTML(c, routineCount = 0, lastMeasureWeight = null, targetView = 'client-detail') {
     return `
-      <div class="client-card" onclick="app.navigate('client-detail',{clientId:'${c.id}'})">
+      <div class="client-card" onclick="app.navigate('${targetView}',{clientId:'${c.id}'})">
         <div class="client-avatar ${c.color||'avatar-purple'}">${c.avatar||c.name[0]}</div>
         <div class="client-info">
           <div class="client-name">${c.name}</div>
           <div class="client-meta">🎯 ${c.goal||'Sin objetivo'}</div>
-          <div class="client-meta">📋 ${routineCount} rutinas · ⚖️ ${lastMeasureWeight ? lastMeasureWeight+'kg' : 'Sin medidas'}</div>
+          ${targetView === 'client-detail' ? `<div class="client-meta">📋 ${routineCount} rutinas · ⚖️ ${lastMeasureWeight ? lastMeasureWeight+'kg' : 'Sin medidas'}</div>` : ''}
         </div>
+        ${targetView === 'client-detail' ? `
         <div class="client-actions" onclick="event.stopPropagation()">
           <button class="btn btn-outline btn-sm" onclick="app.openEditClientModal('${c.id}')">✏️</button>
-        </div>
+        </div>` : ''}
       </div>`;
   }
 
@@ -804,8 +807,10 @@ class GymApp {
           </div>
           <div class="routine-actions">
             <button class="btn btn-outline btn-sm" onclick="app.openRoutineDetailModal('${routine.id}')">Ver</button>
+            ${app.user?.role === 'trainer' ? `
             <button class="btn btn-outline btn-sm" onclick="app.openAddRoutineModal('${routine.clientId}','${routine.id}')">✏️</button>
             <button class="btn btn-danger btn-sm" onclick="app.confirmDeleteRoutine('${routine.id}','${routine.clientId}')">🗑</button>
+            ` : ''}
           </div>
         </div>
         <div class="routine-days">${(routine.daysOfWeek||[]).map(d=>`<span class="day-tag">${dayLabel(d)}</span>`).join('')}</div>
@@ -1494,6 +1499,15 @@ class GymApp {
   // MEASUREMENTS
   // ════════════════════════════════════════════════════
   async renderMedidas(clientId) {
+    if (this.user.role === 'trainer' && !clientId) {
+      const clients = await DB.getClientsByTrainer(this.user.id);
+      return `
+        <div class="view-header"><div class="view-title">Medidas de Clientes</div></div>
+        ${clients.length ? `<div class="clients-grid">${clients.map(c => this.clientCardHTML(c, 0, null, 'medidas')).join('')}</div>`
+        : '<div class="empty-state"><div class="empty-icon">👥</div><h3>Sin clientes</h3></div>'}
+      `;
+    }
+
     const cid      = clientId || this.user.id;
     const client   = await DB.getUser(cid);
     const measures = await DB.getMeasurementsByClient(cid);
@@ -1519,7 +1533,8 @@ class GymApp {
 
     return `
       <div class="view-header">
-        <div class="view-title">Medidas Corporales ${client && client.id !== this.user.id ? `<small>${client.name}</small>` : ''}</div>
+        ${this.user.role === 'trainer' ? `<button class="btn btn-ghost btn-sm" onclick="app.navigate('medidas')">← Volver</button>` : ''}
+        <div class="view-title">Medidas ${client && client.id !== this.user.id ? `<small>${client.name}</small>` : ''}</div>
         <button class="btn btn-primary btn-sm" onclick="app.openAddMeasurementModal('${cid}')">+ Registrar</button>
       </div>
       ${latest ? `
@@ -1549,14 +1564,15 @@ class GymApp {
             <span>${m.weight?m.weight+'kg':'-'}</span>
             <span>${m.bodyFat?m.bodyFat+'%':'-'}</span>
             <span>${calcIMC(m.weight,m.height)}</span>
-            <button class="btn btn-danger btn-sm" onclick="app.confirmDeleteMeasurement('${m.id}','${cid}')">🗑</button>
+            ${this.user.role === 'trainer' ? `<button class="btn btn-danger btn-sm" onclick="app.confirmDeleteMeasurement('${m.id}','${cid}')">🗑</button>` : ''}
           </div>`).join('')}
         </div>
       ` : `
         <div class="empty-state">
           <div class="empty-icon">📏</div><h3>Sin medidas registradas</h3>
           <button class="btn btn-primary" style="margin-top:16px" onclick="app.openAddMeasurementModal('${cid}')">+ Registrar medidas</button>
-        </div>`}`;
+        </div>`}
+    `;
   }
 
   async openAddMeasurementModal(clientId) {
@@ -1646,12 +1662,22 @@ class GymApp {
   // PROGRESS CHARTS
   // ════════════════════════════════════════════════════
   async renderProgreso(clientId) {
+    if (this.user.role === 'trainer' && !clientId) {
+      const clients = await DB.getClientsByTrainer(this.user.id);
+      return `
+        <div class="view-header"><div class="view-title">Progreso de Clientes</div></div>
+        ${clients.length ? `<div class="clients-grid">${clients.map(c => this.clientCardHTML(c, 0, null, 'progreso')).join('')}</div>`
+        : '<div class="empty-state"><div class="empty-icon">👥</div><h3>Sin clientes</h3></div>'}
+      `;
+    }
+
     const cid      = clientId || this.user.id;
     const client   = await DB.getUser(cid);
     const measures = (await DB.getMeasurementsByClient(cid)).reverse();
 
     return `
       <div class="view-header">
+        ${this.user.role === 'trainer' ? `<button class="btn btn-ghost btn-sm" onclick="app.navigate('progreso')">← Volver</button>` : ''}
         <div class="view-title">Progreso ${client && client.id !== this.user.id ? `<small>${client.name}</small>` : ''}</div>
       </div>
       ${measures.length < 2 ? `
