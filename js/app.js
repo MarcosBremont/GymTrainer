@@ -910,8 +910,14 @@ class GymApp {
         </div>
       </form>`;
 
+    // Guardar params del builder para reabrirlo desde el selector de ejercicios
+    this._builderParams = { preClientId, editRoutineId };
+
     this.openModal(editing ? 'Editar Rutina' : 'Nueva Rutina', html, true);
-    this._updateBuilderList = () => { document.getElementById('ex-builder-list').innerHTML = renderExList(); };
+    this._updateBuilderList = () => {
+      const el = document.getElementById('ex-builder-list');
+      if (el) el.innerHTML = renderExList();
+    };
 
     document.getElementById('routine-form').onsubmit = async e => {
       e.preventDefault();
@@ -940,7 +946,38 @@ class GymApp {
     this._updateBuilderList?.();
   }
 
+  // Guarda los valores actuales del form del builder antes de reemplazar el modal
+  _saveBuilderFormState() {
+    const form = document.getElementById('routine-form');
+    if (!form) return;
+    const fd = new FormData(form);
+    this._builderFormData = {
+      name:     fd.get('name')    || '',
+      clientId: fd.get('clientId') || '',
+      days:     fd.getAll('days'),
+      notes:    fd.get('notes')   || '',
+    };
+  }
+
+  // Restaura los valores guardados en el form del builder (con pequeño timeout para esperar el DOM)
+  _restoreBuilderFormState() {
+    const data = this._builderFormData;
+    if (!data) return;
+    setTimeout(() => {
+      const f = document.getElementById('routine-form');
+      if (!f) return;
+      const n = f.querySelector('[name=name]');     if (n) n.value = data.name;
+      const c = f.querySelector('[name=clientId]'); if (c) c.value = data.clientId;
+      const t = f.querySelector('[name=notes]');    if (t) t.value = data.notes;
+      data.days.forEach(day => {
+        const cb = f.querySelector(`[name=days][value="${day}"]`);
+        if (cb) cb.checked = true;
+      });
+    }, 30);
+  }
+
   openExercisePickerModal() {
+    this._saveBuilderFormState(); // guardar estado antes de reemplazar el modal
     let selectedGroup = 'pecho';
     const renderLib = g => EXERCISE_LIBRARY[g].exercises.map(ex => `
       <div class="ex-lib-item" onclick="app.openExerciseConfigModal('${g}','${ex.id}')">
@@ -987,13 +1024,22 @@ class GymApp {
         </div>
       </form>`, true);
 
-    document.getElementById('ex-config-form').onsubmit = e => {
+    document.getElementById('ex-config-form').onsubmit = async e => {
       e.preventDefault();
       const fd = new FormData(e.target);
-      this._builderExercises.push({ id: uid(), exerciseId, name: ex.name, muscleGroup, sets: parseInt(fd.get('sets')), reps: fd.get('reps'), weight: fd.get('weight'), rest: parseInt(fd.get('rest')), notes: fd.get('notes') });
-      this._updateBuilderList?.();
-      this.closeModal();
-      this.toast('Ejercicio añadido');
+      this._builderExercises.push({
+        id: uid(), exerciseId, name: ex.name, muscleGroup,
+        sets: parseInt(fd.get('sets')), reps: fd.get('reps'),
+        weight: fd.get('weight'), rest: parseInt(fd.get('rest')),
+        notes: fd.get('notes'),
+      });
+      this.toast('✅ Ejercicio añadido');
+      // Reabrir el builder (el modal fue reemplazado, ex-builder-list ya no existe en el DOM)
+      await this.openAddRoutineModal(
+        this._builderParams?.preClientId,
+        this._builderParams?.editRoutineId,
+      );
+      this._restoreBuilderFormState(); // restaurar nombre, cliente, días y notas
     };
   }
 
