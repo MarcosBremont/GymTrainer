@@ -695,6 +695,39 @@ ul { list-style: none; }
 }
 .muscle-btn.active, .muscle-btn:hover { background: rgba(108,99,255,0.2); color: var(--primary); border-color: var(--primary); }
 
+/* Custom exercise items in picker */
+.ex-lib-item--custom {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  gap: 10px;
+  grid-column: 1 / -1;       /* ocupa toda la fila */
+}
+.ex-lib-item--custom .ex-lib-icon { margin-bottom: 0; font-size: 1.5rem; flex-shrink: 0; }
+.ex-lib-custom-actions {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.ex-lib-custom-actions .btn-ghost { color: var(--text3); padding: 5px 8px; }
+.ex-lib-custom-actions .btn-ghost:hover { color: var(--primary); background: rgba(108,99,255,0.12); }
+
+/* "Personalizado" badge shown in exercise config header */
+.badge-custom-ex {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(255,230,109,0.2);
+  color: var(--yellow);
+  border: 1px solid rgba(255,230,109,0.3);
+}
+
+
+
 /* ===================================================
    NUTRITION
    =================================================== */

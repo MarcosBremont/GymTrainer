@@ -1029,9 +1029,16 @@ class GymApp {
     }, 30);
   }
 
-  openExercisePickerModal() {
+  async openExercisePickerModal() {
     this._saveBuilderFormState(); // guardar estado antes de reemplazar el modal
-    let selectedGroup = 'pecho';
+
+    // Cargar ejercicios personalizados del entrenador
+    const customExs = this.user.role === 'trainer'
+      ? await DB.getCustomExercisesByTrainer(this.user.id)
+      : [];
+
+    let selectedGroup = customExs.length ? '__custom__' : 'pecho';
+
     const renderLib = g => EXERCISE_LIBRARY[g].exercises.map(ex => `
       <div class="ex-lib-item" onclick="app.openExerciseConfigModal('${g}','${ex.id}')">
         <div class="ex-lib-icon">${EXERCISE_LIBRARY[g].icon}</div>
@@ -1039,21 +1046,173 @@ class GymApp {
         <div class="ex-lib-muscle">${EXERCISE_LIBRARY[g].label}</div>
       </div>`).join('');
 
+    const renderCustom = () => {
+      if (!customExs.length) {
+        return `<div class="empty-state" style="padding:32px 16px">
+          <div class="empty-icon">✏️</div>
+          <h3 style="font-size:1rem">Sin ejercicios personalizados</h3>
+          <p style="font-size:.85rem">Crea tu primer ejercicio con el botón de arriba</p>
+        </div>`;
+      }
+      return customExs.map(ex => {
+        const g = EXERCISE_LIBRARY[ex.muscleGroup] || { icon: ex.icon || '🏋️', label: ex.muscleGroup, color: 'var(--primary)' };
+        return `
+        <div class="ex-lib-item ex-lib-item--custom" onclick="app.openExerciseConfigModal('__custom__', '${ex.id}', ${JSON.stringify(ex).replace(/"/g,'&quot;')})">
+          <div class="ex-lib-icon">${ex.icon || g.icon}</div>
+          <div style="flex:1;min-width:0">
+            <div class="ex-lib-name">${ex.name}</div>
+            <div class="ex-lib-muscle">${g.label}</div>
+          </div>
+          <div class="ex-lib-custom-actions" onclick="event.stopPropagation()">
+            <button class="btn btn-ghost btn-sm" title="Editar" onclick="app.openCreateCustomExerciseModal('${ex.id}')">✏️</button>
+            <button class="btn btn-ghost btn-sm" title="Eliminar" onclick="app._confirmDeleteCustomExercise('${ex.id}','${ex.name.replace(/'/g,"\\'")}')">🗑️</button>
+          </div>
+        </div>`;
+      }).join('');
+    };
+
+    const renderGroup = g => g === '__custom__' ? renderCustom() : renderLib(g);
+
     this.openModal('Seleccionar Ejercicio', `
-      <div class="muscle-filter" id="muscle-filter">
-        ${Object.entries(EXERCISE_LIBRARY).map(([k,g])=>`<button class="muscle-btn ${k===selectedGroup?'active':''}" data-group="${k}" onclick="app._switchMuscleGroup('${k}')">${g.icon} ${g.label}</button>`).join('')}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px">
+        <div class="muscle-filter" id="muscle-filter" style="flex:1">
+          <button class="muscle-btn ${selectedGroup==='__custom__'?'active':''}" data-group="__custom__" onclick="app._switchMuscleGroup('__custom__')">✏️ Mis ejercicios</button>
+          ${Object.entries(EXERCISE_LIBRARY).map(([k,g])=>`<button class="muscle-btn ${k===selectedGroup?'active':''}" data-group="${k}" onclick="app._switchMuscleGroup('${k}')">${g.icon} ${g.label}</button>`).join('')}
+        </div>
       </div>
-      <div class="exercise-library" id="ex-library">${renderLib(selectedGroup)}</div>`, true);
+      <button class="btn btn-outline btn-sm btn-full" style="margin-bottom:10px" onclick="app.openCreateCustomExerciseModal()">✨ Crear ejercicio personalizado</button>
+      <div class="exercise-library" id="ex-library">${renderGroup(selectedGroup)}</div>`, true);
 
     this._switchMuscleGroup = group => {
       document.querySelectorAll('.muscle-btn').forEach(b => b.classList.toggle('active', b.dataset.group === group));
-      document.getElementById('ex-library').innerHTML = renderLib(group);
+      document.getElementById('ex-library').innerHTML = renderGroup(group);
     };
   }
 
-  openExerciseConfigModal(muscleGroup, exerciseId) {
-    const g  = EXERCISE_LIBRARY[muscleGroup];
-    const ex = g.exercises.find(e => e.id === exerciseId);
+  // Abre el modal para crear o editar un ejercicio personalizado
+  async openCreateCustomExerciseModal(editId = null) {
+    let editing = null;
+    if (editId) {
+      const all = await DB.getCustomExercisesByTrainer(this.user.id);
+      editing = all.find(e => e.id === editId) || null;
+    }
+
+    const muscleOptions = Object.entries(EXERCISE_LIBRARY)
+      .map(([k,g]) => `<option value="${k}" ${editing?.muscleGroup===k?'selected':''}>${g.icon} ${g.label}</option>`)
+      .join('');
+
+    const html = `
+      <form id="custom-ex-form">
+        <div class="form-group">
+          <label>Nombre del ejercicio *</label>
+          <input type="text" name="name" value="${editing?.name||''}" placeholder="Ej: Curl predicador inverso" required/>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Grupo muscular *</label>
+            <select name="muscleGroup" required>
+              <option value="">Seleccionar…</option>
+              ${muscleOptions}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Icono (emoji)</label>
+            <input type="text" name="icon" value="${editing?.icon||''}" placeholder="Ej: 💪" maxlength="4" style="font-size:1.4rem;text-align:center"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Series por defecto</label>
+            <input type="number" name="sets" value="${editing?.sets||3}" min="1" max="20"/>
+          </div>
+          <div class="form-group">
+            <label>Reps por defecto</label>
+            <input type="text" name="reps" value="${editing?.reps||'10-12'}" placeholder="Ej: 8-12"/>
+          </div>
+          <div class="form-group">
+            <label>Descanso (seg)</label>
+            <input type="number" name="rest" value="${editing?.rest||60}" min="0"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Descripción / Instrucciones</label>
+          <textarea name="description" placeholder="Notas técnicas, equipamiento necesario…">${editing?.description||''}</textarea>
+        </div>
+        <p id="custom-ex-err" class="form-error hidden"></p>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" onclick="app.openExercisePickerModal()">← Volver</button>
+          <button type="submit" class="btn btn-primary">💾 ${editing ? 'Actualizar' : 'Crear ejercicio'}</button>
+        </div>
+      </form>`;
+
+    this.openModal(editing ? 'Editar Ejercicio' : 'Nuevo Ejercicio Personalizado', html, true);
+
+    document.getElementById('custom-ex-form').onsubmit = async e => {
+      e.preventDefault();
+      const btn   = e.target.querySelector('[type=submit]');
+      const errEl = document.getElementById('custom-ex-err');
+      btn.disabled = true; btn.textContent = 'Guardando…';
+      errEl.classList.add('hidden');
+      try {
+        const fd = new FormData(e.target);
+        await DB.saveCustomExercise({
+          id:          editing?.id || null,
+          trainerId:   this.user.id,
+          name:        fd.get('name').trim(),
+          muscleGroup: fd.get('muscleGroup'),
+          icon:        fd.get('icon').trim() || null,
+          sets:        parseInt(fd.get('sets')) || 3,
+          reps:        fd.get('reps') || '10-12',
+          rest:        parseInt(fd.get('rest')) || 60,
+          description: fd.get('description').trim(),
+        });
+        this.toast(editing ? '✅ Ejercicio actualizado' : '✅ Ejercicio creado');
+        await this.openExercisePickerModal();
+        this._switchMuscleGroup('__custom__');
+      } catch(err) {
+        errEl.textContent = err.message;
+        errEl.classList.remove('hidden');
+        btn.disabled = false;
+        btn.textContent = editing ? 'Actualizar' : 'Crear ejercicio';
+      }
+    };
+  }
+
+  _confirmDeleteCustomExercise(id, name) {
+    this.openModal('Eliminar Ejercicio', `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:3rem;margin-bottom:12px">⚠️</div>
+        <p>¿Eliminar <strong>${name}</strong>?</p>
+        <p style="color:var(--text2);font-size:.85rem;margin-top:8px">Se eliminará de tu biblioteca. Las rutinas que ya lo usen no se verán afectadas.</p>
+        <div class="form-actions" style="justify-content:center;margin-top:20px">
+          <button class="btn btn-ghost" onclick="app.openExercisePickerModal();app._switchMuscleGroup('__custom__')">Cancelar</button>
+          <button class="btn btn-danger" onclick="app._deleteCustomExercise('${id}')">Eliminar</button>
+        </div>
+      </div>`);
+  }
+
+  async _deleteCustomExercise(id) {
+    await DB.deleteCustomExercise(id);
+    this.toast('Ejercicio eliminado', 'info');
+    await this.openExercisePickerModal();
+    this._switchMuscleGroup('__custom__');
+  }
+
+  openExerciseConfigModal(muscleGroup, exerciseId, customExObj = null) {
+    // Soporte para ejercicios personalizados (pasan el objeto completo)
+    let ex, g;
+    if (muscleGroup === '__custom__' && customExObj) {
+      ex = typeof customExObj === 'string' ? JSON.parse(customExObj.replace(/&quot;/g, '"')) : customExObj;
+      const libGroup = EXERCISE_LIBRARY[ex.muscleGroup];
+      g = {
+        icon:  ex.icon || libGroup?.icon || '🏋️',
+        label: libGroup?.label || ex.muscleGroup,
+        color: libGroup?.color || 'var(--primary)',
+      };
+    } else {
+      g  = EXERCISE_LIBRARY[muscleGroup];
+      ex = g.exercises.find(e => e.id === exerciseId);
+    }
 
     // Genera las filas de la tabla (una por serie)
     const genRows = (n, defaultReps = ex.reps, defaultWeight = '') =>
@@ -1075,7 +1234,9 @@ class GymApp {
         <div style="font-size:2.4rem">${g.icon}</div>
         <div style="font-weight:700;font-size:1.05rem;margin-top:4px">${ex.name}</div>
         <div style="opacity:.85;font-size:.82rem">${g.label}</div>
+        ${muscleGroup === '__custom__' ? '<div style="margin-top:4px"><span class="badge-custom-ex">✏️ Personalizado</span></div>' : ''}
         ${ex.instructions ? `<div style="margin-top:6px;font-size:.78rem;opacity:.85">${ex.instructions}</div>` : ''}
+        ${ex.description  ? `<div style="margin-top:6px;font-size:.78rem;opacity:.85">${ex.description}</div>`  : ''}
       </div>
       <form id="ex-config-form">
         <div class="form-row">
@@ -1154,8 +1315,12 @@ class GymApp {
         weight: fd.get(`weight_${i+1}`) || '',
       }));
 
+      const resolvedMuscleGroup = muscleGroup === '__custom__' ? (ex.muscleGroup || 'core') : muscleGroup;
+
       this._builderExercises.push({
-        id: uid(), exerciseId, name: ex.name, muscleGroup,
+        id: uid(), exerciseId: ex.id || exerciseId, name: ex.name,
+        muscleGroup: resolvedMuscleGroup,
+        isCustom: muscleGroup === '__custom__',
         sets,
         setsData,
         // Campos planos (resumen) para la vista rápida de cards

@@ -676,6 +676,30 @@ export class DB {
     await deleteDoc(doc(db, 'measurements', id));
   }
 
+  /* ---- CUSTOM EXERCISES ---- */
+  static async getCustomExercisesByTrainer(trainerId) {
+    const q = query(collection(db, 'customExercises'), where('trainerId', '==', trainerId));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+  }
+
+  static async saveCustomExercise(ex) {
+    const { id, ...data } = ex;
+    if (id) {
+      await setDoc(doc(db, 'customExercises', id), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+      return id;
+    } else {
+      const ref = await addDoc(collection(db, 'customExercises'), { ...data, createdAt: serverTimestamp() });
+      return ref.id;
+    }
+  }
+
+  static async deleteCustomExercise(id) {
+    await deleteDoc(doc(db, 'customExercises', id));
+  }
+
   /* ---- DEMO DATA INITIALIZATION ---- */
   static async initDemoData() {
     // Run only once per browser
