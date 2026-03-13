@@ -597,7 +597,7 @@ const GIF_MAPPING = {
   'sentadillas-frontales-con-barra': 'landmine_front_squat.gif',
   'sentadillas-bulgarian-split-squats-con-mancuernas': 'dumbbell_bulgarian_split_squat.gif',
   'sentadillas-con-mancuernas': 'dumbbell_goblet_squat.gif',
-  'sentadillas-sissy-squats': 'sissy_squat.gif',
+  'sentadillas-sissy-squats': null,
   'prensa-de-piernas-leg-press': 'sled_45_leg_wide_press.gif',
   'prensa-de-piernas-45-grados': '45_degree_leg_press.gif',
   'prensa-de-piernas-horizontal': 'horizontal_leg_press.gif',
