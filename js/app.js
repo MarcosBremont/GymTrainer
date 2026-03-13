@@ -1245,12 +1245,12 @@ class GymApp {
           <label style="color:#fff;font-weight:600">Foto / GIF</label>
           <div style="display:flex;flex-direction:column;gap:10px">
             <div id="exercise-photo-current" style="width:100%;max-width:300px;border-radius:8px;margin-top:10px">
-              ${exercisePhotoSrc ? `<img src="${exercisePhotoSrc}" alt="${ex.name}" style="width:100%;border-radius:8px">` : `<div style="padding:18px;border:1px dashed rgba(255,255,255,0.5);border-radius:8px;text-align:center;color:rgba(255,255,255,0.75)">No hay imagen disponible</div>`}
+              ${exercisePhotoSrc ? `<img src="${exercisePhotoSrc}" alt="${ex.name}" style="width:100%;border-radius:8px">` : `<div style="padding:18px;border:1px dashed rgba(255,255,255,0.5);border-radius:8px;text-align:center;color:rgba(255,255,255,0.75);display:flex;align-items:center;justify-content:center;height:120px">No hay imagen disponible</div>`}
             </div>
             <div id="exercise-photo-buttons" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center${exercisePhotoSrc ? ';display:none' : ''}">
-              <button type="button" class="btn btn-outline btn-sm" onclick="app.selectExercisePhotoFile()">📁 Subir</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="app.takeExercisePhoto()">📷 Cámara</button>
-              <button type="button" class="btn btn-primary btn-sm" id="btn-save-exercise-photo" style="display:none" onclick="app.saveExercisePhoto('${ex.id}')">💾 Guardar foto</button>
+              <button type="button" class="btn btn-outline btn-sm" style="color:#fff" onclick="app.selectExercisePhotoFile()">📁 Subir</button>
+              <button type="button" class="btn btn-outline btn-sm" style="color:#fff" onclick="app.takeExercisePhoto()">📷 Cámara</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-save-exercise-photo" style="display:none;color:#fff" onclick="app.saveExercisePhoto('${ex.id}')">💾 Guardar foto</button>
             </div>
             <input type="file" id="exercise-photo-file" accept="image/*" style="display:none" onchange="app.previewExercisePhoto(this, '${ex.id}')">
             <div id="exercise-photo-preview" style="display:none;margin-top:10px"><img id="exercise-preview-img" style="max-width:100%;max-height:200px;border-radius:8px"></div>
