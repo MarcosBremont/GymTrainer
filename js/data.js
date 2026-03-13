@@ -535,10 +535,85 @@ export const EXERCISE_LIBRARY = {
   }
 };
 
+// ── GIF Mapping ──────────────────────────────────────────────────
+const GIF_MAPPING = {
+  // Pecho
+  'press-de-banca-plano-con-barra': 'barbell_bench_press.gif',
+  'press-de-banca-inclinado-con-barra': 'barbell_incline_bench_press.gif',
+  'press-de-banca-declinado-con-barra': 'barbell_decline_bench_press.gif',
+  'press-de-banca-plano-con-mancuernas': 'dumbbell_bench_press.gif',
+  'press-de-banca-inclinado-con-mancuernas': 'dumbbell_incline_bench_press.gif',
+  'press-de-banca-declinado-con-mancuernas': 'dumbbell_decline_bench_press.gif',
+  'aperturas-flyes-planas-con-mancuernas': 'dumbbell_fly.gif',
+  'aperturas-inclinadas-con-mancuernas': 'dumbbell_incline_fly.gif',
+  'aperturas-declinadas-con-mancuernas': 'dumbbell_decline_fly.gif',
+  'flexiones-de-pecho-push-ups-clasicas': 'push_up.gif',
+  'fondos-en-paralelas-dips-con-peso-corporal': 'dip.gif',
+  'fondos-en-paralelas-lastrados': 'weighted_dip.gif',
+
+  // Espalda
+  'dominadas-abiertas-pull-ups': 'pull_up.gif',
+  'dominadas-supinas-chin-ups': 'chin_up.gif',
+  'jalon-al-pecho-con-polea-ancha-barra-recta': 'lat_pulldown.gif',
+  'jalon-al-pecho-con-agarre-supino-estrecho': 'close_grip_lat_pulldown.gif',
+  'jalon-al-pecho-con-agarre-neutro-triangulo': 'neutral_grip_lat_pulldown.gif',
+  'remo-con-barra-sentado': 'seated_cable_row.gif',
+  'remo-con-mancuernas-en-banco-inclinado': 'dumbbell_row.gif',
+  'remo-con-barra-tumbado-prono': 'barbell_row.gif',
+  'remo-en-maquina': 'machine_row.gif',
+  'face-pull-con-cuerda': 'face_pull.gif',
+  'encogimiento-de-hombros-shrugs-con-barra': 'barbell_shrug.gif',
+  'encogimiento-de-hombros-con-mancuernas': 'dumbbell_shrug.gif',
+
+  // Piernas
+  'sentadillas-con-barra': 'barbell_squat.gif',
+  'sentadillas-frontales-con-barra': 'barbell_front_squat.gif',
+  'sentadillas-bulgarian-split-squats-con-mancuernas': 'dumbbell_bulgarian_split_squat.gif',
+  'prensa-de-piernas-leg-press': 'leg_press.gif',
+  'extensiones-de-cuadriceps-en-maquina': 'leg_extension.gif',
+  'curl-de-piernas-hamstrings-en-maquina': 'leg_curl.gif',
+  'peso-muerto-con-barra': 'barbell_deadlift.gif',
+  'peso-muerto-rumano-con-barra': 'romanian_deadlift.gif',
+  'peso-muerto-con-mancuernas': 'dumbbell_deadlift.gif',
+  'gemelos-de-pie-calf-raises-con-barra': 'standing_calf_raise.gif',
+  'gemelos-sentado-calf-raises-con-mancuernas': 'seated_calf_raise.gif',
+
+  // Brazos
+  'curl-de-biceps-con-barra': 'barbell_curl.gif',
+  'curl-de-biceps-con-mancuernas': 'dumbbell_curl.gif',
+  'curl-martillo-hammer-curls-con-mancuernas': 'hammer_curl.gif',
+  'curl-de-biceps-en-polea': 'cable_curl.gif',
+  'extensiones-de-triceps-con-mancuerna': 'overhead_tricep_extension.gif',
+  'extensiones-de-triceps-con-barra': 'skull_crusher.gif',
+  'fondos-de-triceps-en-paralelas': 'tricep_dip.gif',
+  'press-frances-con-barra': 'french_press.gif',
+  'press-frances-con-mancuernas': 'dumbbell_french_press.gif',
+  'extensiones-de-triceps-en-polea': 'cable_tricep_pushdown.gif',
+
+  // Hombros
+  'press-militar-con-barra': 'barbell_shoulder_press.gif',
+  'press-militar-con-mancuernas': 'dumbbell_shoulder_press.gif',
+  'press-arnold-con-mancuernas': 'arnold_press.gif',
+  'elevaciones-laterales-con-mancuernas': 'lateral_raise.gif',
+  'elevaciones-frontales-con-mancuernas': 'front_raise.gif',
+  'elevaciones-posteriores-con-mancuernas': 'rear_delt_fly.gif',
+  'elevaciones-posteriores-en-polea': 'cable_rear_delt_fly.gif',
+  'remo-al-menton-upright-row-con-barra': 'upright_row.gif',
+
+  // Core
+  'plancha-plank': 'plank.gif',
+  'crunch-abdominal': 'crunch.gif',
+  'russian-twist-con-medicina-ball': 'russian_twist.gif',
+  'mountain-climbers': 'mountain_climber.gif',
+  'bicicleta-abdominal': 'bicycle_crunch.gif',
+  'puente-glute-bridge': 'glute_bridge.gif',
+  'elevacion-de-piernas-colgando': 'hanging_leg_raise.gif',
+};
+
 // Add GIF paths to exercises
 Object.values(EXERCISE_LIBRARY).forEach(group => {
   group.exercises.forEach(ex => {
-    ex.gif = `assets/gifs/${ex.id}.gif`;
+    ex.gif = GIF_MAPPING[ex.id] ? `assets/gifs/${GIF_MAPPING[ex.id]}` : null;
   });
 });
 
