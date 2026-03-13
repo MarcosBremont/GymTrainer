@@ -1245,7 +1245,7 @@ class GymApp {
           <label style="color:#fff;font-weight:600">Foto / GIF</label>
           <div style="display:flex;flex-direction:column;gap:10px">
             <div id="exercise-photo-current" style="width:100%;max-width:300px;border-radius:8px;margin-top:10px">
-              ${exercisePhotoSrc ? `<img src="${exercisePhotoSrc}" alt="${ex.name}" style="width:100%;border-radius:8px">` : `<div style="padding:18px;border:1px dashed rgba(255,255,255,0.5);border-radius:8px;text-align:center;color:rgba(255,255,255,0.75);display:flex;align-items:center;justify-content:center;height:120px">No hay imagen disponible</div>`}
+              ${exercisePhotoSrc ? `<img src="${exercisePhotoSrc}" alt="${ex.name}" style="width:100%;border-radius:8px">` : `<div style="padding:18px;border:1px dashed rgba(255,255,255,0.5);border-radius:8px;color:rgba(255,255,255,0.75);display:flex;align-items:center;justify-content:center;min-height:140px">No hay imagen disponible</div>`}
             </div>
             <div id="exercise-photo-buttons" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center${exercisePhotoSrc ? ';display:none' : ''}">
               <button type="button" class="btn btn-outline btn-sm" style="color:#fff" onclick="app.selectExercisePhotoFile()">📁 Subir</button>
