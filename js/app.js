@@ -1247,7 +1247,7 @@ class GymApp {
             <div id="exercise-photo-current" style="width:100%;max-width:300px;border-radius:8px;margin-top:10px">
               ${exercisePhotoSrc ? `<img src="${exercisePhotoSrc}" alt="${ex.name}" style="width:100%;border-radius:8px">` : `<div style="padding:18px;border:1px dashed var(--border);border-radius:8px;text-align:center;color:var(--text2)">No hay imagen disponible</div>`}
             </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <div id="exercise-photo-buttons" style="display:flex;gap:8px;flex-wrap:wrap${exercisePhotoSrc ? ';display:none' : ''}">
               <button type="button" class="btn btn-outline btn-sm" onclick="app.selectExercisePhotoFile()">📁 Subir</button>
               <button type="button" class="btn btn-outline btn-sm" onclick="app.takeExercisePhoto()">📷 Cámara</button>
               <button type="button" class="btn btn-primary btn-sm" id="btn-save-exercise-photo" style="display:none" onclick="app.saveExercisePhoto('${ex.id}')">💾 Guardar foto</button>
@@ -2015,6 +2015,11 @@ class GymApp {
       const currentContainer = document.getElementById('exercise-photo-current');
       if (currentContainer) {
         currentContainer.innerHTML = `<img src="${pending.base64}" alt="Ejercicio" style="width:100%;border-radius:8px">`;
+      }
+      // Ocultar botones de subir/cámara ya que ahora hay imagen
+      const buttonsContainer = document.getElementById('exercise-photo-buttons');
+      if (buttonsContainer) {
+        buttonsContainer.style.display = 'none';
       }
       this._pendingExercisePhoto = null;
       document.getElementById('btn-save-exercise-photo').style.display = 'none';
