@@ -558,6 +558,16 @@ const GIF_MAPPING = {
   'flexiones-de-pecho-push-ups-clasicas': 'push_up.gif',
   'fondos-en-paralelas-dips-con-peso-corporal': 'dip.gif',
   'fondos-en-paralelas-lastrados': 'weighted_dip.gif',
+  'machine-chest-press': 'machine_chest_press.gif',
+  'cable-crossover': 'cable_crossover.gif',
+  'butterfly-machine': 'butterfly_machine.gif',
+  'incline-dumbbell-press': 'dumbbell_incline_bench_press.gif',
+  'decline-dumbbell-press': 'dumbbell_decline_bench_press.gif',
+  'close-grip-bench-press': 'close_grip_bench_press.gif',
+  'floor-press': 'floor_press.gif',
+  'guillotine-press': 'guillotine_press.gif',
+  'hex-press': 'hex_press.gif',
+  'squeeze-press': 'squeeze_press.gif',
 
   // Espalda
   'dominadas-abiertas-pull-ups': 'pull_up.gif',
@@ -572,6 +582,15 @@ const GIF_MAPPING = {
   'face-pull-con-cuerda': 'face_pull.gif',
   'encogimiento-de-hombros-shrugs-con-barra': 'barbell_shrug.gif',
   'encogimiento-de-hombros-con-mancuernas': 'dumbbell_shrug.gif',
+  't-bar-row': 't_bar_row.gif',
+  'pendlay-row': 'pendlay_row.gif',
+  'meadows-row': 'meadows_row.gif',
+  'inverted-row': 'inverted_row.gif',
+  'australian-pull-up': 'australian_pull_up.gif',
+  'negative-pull-up': 'negative_pull_up.gif',
+  'rack-pull': 'rack_pull.gif',
+  'deficit-deadlift': 'deficit_deadlift.gif',
+  'snatch-grip-deadlift': 'snatch_grip_deadlift.gif',
 
   // Piernas
   'sentadillas-con-barra': 'barbell_squat.gif',
