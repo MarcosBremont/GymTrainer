@@ -613,7 +613,8 @@ const GIF_MAPPING = {
 // Add GIF paths to exercises
 Object.values(EXERCISE_LIBRARY).forEach(group => {
   group.exercises.forEach(ex => {
-    ex.gif = GIF_MAPPING[ex.id] ? `assets/gifs/${GIF_MAPPING[ex.id]}` : null;
+    const gifFile = GIF_MAPPING[ex.id];
+    ex.gif = gifFile ? `assets/gifs/${gifFile}` : null;
   });
 });
 
