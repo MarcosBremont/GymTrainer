@@ -1976,14 +1976,15 @@ class GymApp {
         <div class="chart-card"><div class="chart-title">📐 Medidas Corporales (cm)</div><div class="chart-wrap" style="height:250px"><canvas id="chart-measures"></canvas></div></div>
         <div class="chart-card"><div class="chart-title">💪 Brazos (cm)</div><div class="chart-wrap"><canvas id="chart-arms"></canvas></div></div>
         <div class="card" style="margin-top:8px"><div class="section-title" style="margin-bottom:12px">Resumen de cambios</div>${this.progressSummaryHTML(measures)}</div>
-        <div class="card" style="margin-top:8px">
-          <div class="section-header">
-            <span class="section-title">📸 Fotos de Progreso</span>
-            <button class="btn btn-outline btn-sm" onclick="app.openPhotoModal('${cid}')">Agregar Foto</button>
-          </div>
-          ${photos.length ? `<div class="photos-grid">${photos.map(p => this.photoCardHTML(p)).join('')}</div>` : '<div class="empty-state" style="padding:20px"><div class="empty-icon">📷</div><p>No hay fotos de progreso aún</p></div>'}
+      `}
+      <div class="card" style="margin-top:8px">
+        <div class="section-header">
+          <span class="section-title">📸 Fotos de Progreso</span>
+          <button class="btn btn-outline btn-sm" onclick="app.openPhotoModal('${cid}')">Agregar Foto</button>
         </div>
-      `}`;
+        ${photos.length ? `<div class="photos-grid">${photos.map(p => this.photoCardHTML(p)).join('')}</div>` : '<div class="empty-state" style="padding:20px"><div class="empty-icon">📷</div><p>No hay fotos de progreso aún</p></div>'}
+      </div>
+    `;
   }
 
   progressSummaryHTML(measures) {
