@@ -611,12 +611,13 @@ const GIF_MAPPING = {
 };
 
 // Add GIF paths to exercises
-Object.values(EXERCISE_LIBRARY).forEach(group => {
-  group.exercises.forEach(ex => {
+for (const groupKey in EXERCISE_LIBRARY) {
+  const group = EXERCISE_LIBRARY[groupKey];
+  for (const ex of group.exercises) {
     const gifFile = GIF_MAPPING[ex.id];
     ex.gif = gifFile ? `assets/gifs/${gifFile}` : null;
-  });
-});
+  }
+}
 
 export const MEAL_SLOTS = [
   { key: 'desayuno',    label: 'Desayuno',      icon: '☀️', time: '7:00 - 8:00 AM'  },
