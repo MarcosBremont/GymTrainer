@@ -1242,12 +1242,12 @@ class GymApp {
         ${ex.instructions ? `<div style="margin-top:6px;font-size:.78rem;opacity:.85">${ex.instructions}</div>` : ''}
         ${ex.description  ? `<div style="margin-top:6px;font-size:.78rem;opacity:.85">${ex.description}</div>`  : ''}
         <div class="form-group">
-          <label>Foto / GIF</label>
+          <label style="color:#fff;font-weight:600">Foto / GIF</label>
           <div style="display:flex;flex-direction:column;gap:10px">
             <div id="exercise-photo-current" style="width:100%;max-width:300px;border-radius:8px;margin-top:10px">
-              ${exercisePhotoSrc ? `<img src="${exercisePhotoSrc}" alt="${ex.name}" style="width:100%;border-radius:8px">` : `<div style="padding:18px;border:1px dashed var(--border);border-radius:8px;text-align:center;color:var(--text2)">No hay imagen disponible</div>`}
+              ${exercisePhotoSrc ? `<img src="${exercisePhotoSrc}" alt="${ex.name}" style="width:100%;border-radius:8px">` : `<div style="padding:18px;border:1px dashed rgba(255,255,255,0.5);border-radius:8px;text-align:center;color:rgba(255,255,255,0.75)">No hay imagen disponible</div>`}
             </div>
-            <div id="exercise-photo-buttons" style="display:flex;gap:8px;flex-wrap:wrap${exercisePhotoSrc ? ';display:none' : ''}">
+            <div id="exercise-photo-buttons" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center${exercisePhotoSrc ? ';display:none' : ''}">
               <button type="button" class="btn btn-outline btn-sm" onclick="app.selectExercisePhotoFile()">📁 Subir</button>
               <button type="button" class="btn btn-outline btn-sm" onclick="app.takeExercisePhoto()">📷 Cámara</button>
               <button type="button" class="btn btn-primary btn-sm" id="btn-save-exercise-photo" style="display:none" onclick="app.saveExercisePhoto('${ex.id}')">💾 Guardar foto</button>
