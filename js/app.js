@@ -1198,7 +1198,7 @@ class GymApp {
     this._switchMuscleGroup('__custom__');
   }
 
-  openExerciseConfigModal(muscleGroup, exerciseId, customExObj = null) {
+  async openExerciseConfigModal(muscleGroup, exerciseId, customExObj = null) {
     // Soporte para ejercicios personalizados (pasan el objeto completo)
     let ex, g;
     if (muscleGroup === '__custom__' && customExObj) {
@@ -1213,6 +1213,10 @@ class GymApp {
       g  = EXERCISE_LIBRARY[muscleGroup];
       ex = g.exercises.find(e => e.id === exerciseId);
     }
+
+    // Cargar foto personalizada guardada por el usuario (si existe)
+    const exercisePhoto = await DB.getExercisePhoto(this.user.id, ex.id);
+    const exercisePhotoSrc = exercisePhoto?.base64 || ex.gif || null;
 
     // Genera las filas de la tabla (una por serie)
     const genRows = (n, defaultReps = ex.reps, defaultWeight = '') =>
@@ -1237,7 +1241,21 @@ class GymApp {
         ${muscleGroup === '__custom__' ? '<div style="margin-top:4px"><span class="badge-custom-ex">✏️ Personalizado</span></div>' : ''}
         ${ex.instructions ? `<div style="margin-top:6px;font-size:.78rem;opacity:.85">${ex.instructions}</div>` : ''}
         ${ex.description  ? `<div style="margin-top:6px;font-size:.78rem;opacity:.85">${ex.description}</div>`  : ''}
-        ${ex.gif ? `<img src="${ex.gif}" alt="${ex.name}" style="width:100%;max-width:300px;border-radius:8px;margin-top:10px">` : ''}
+        <div class="form-group">
+          <label>Foto / GIF</label>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div id="exercise-photo-current" style="width:100%;max-width:300px;border-radius:8px;margin-top:10px">
+              ${exercisePhotoSrc ? `<img src="${exercisePhotoSrc}" alt="${ex.name}" style="width:100%;border-radius:8px">` : `<div style="padding:18px;border:1px dashed var(--border);border-radius:8px;text-align:center;color:var(--text2)">No hay imagen disponible</div>`}
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button type="button" class="btn btn-outline btn-sm" onclick="app.selectExercisePhotoFile()">📁 Subir</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="app.takeExercisePhoto()">📷 Cámara</button>
+              <button type="button" class="btn btn-primary btn-sm" id="btn-save-exercise-photo" style="display:none" onclick="app.saveExercisePhoto('${ex.id}')">💾 Guardar foto</button>
+            </div>
+            <input type="file" id="exercise-photo-file" accept="image/*" style="display:none" onchange="app.previewExercisePhoto(this, '${ex.id}')">
+            <div id="exercise-photo-preview" style="display:none;margin-top:10px"><img id="exercise-preview-img" style="max-width:100%;max-height:200px;border-radius:8px"></div>
+          </div>
+        </div>
       </div>
       <form id="ex-config-form">
         <div class="form-row">
@@ -1879,6 +1897,19 @@ class GymApp {
     input.addEventListener('change', () => input.removeAttribute('capture'), { once: true });
   }
 
+  selectExercisePhotoFile() {
+    document.getElementById('exercise-photo-file')?.click();
+  }
+
+  takeExercisePhoto() {
+    const input = document.getElementById('exercise-photo-file');
+    if (!input) return;
+    input.setAttribute('capture', 'environment');
+    input.click();
+    // Reset after selection
+    input.addEventListener('change', () => input.removeAttribute('capture'), { once: true });
+  }
+
   previewPhoto(input) {
     const file = input.files[0];
     if (file) {
@@ -1941,6 +1972,55 @@ class GymApp {
       this.navigate('progreso', { clientId });
     } catch (err) {
       console.error('Error saving photo:', err);
+      this.toast('Error al guardar la foto', 'error');
+    }
+  }
+
+  previewExercisePhoto(input, exerciseId) {
+    const file = input.files[0];
+    const preview = document.getElementById('exercise-photo-preview');
+    const img = document.getElementById('exercise-preview-img');
+    const saveBtn = document.getElementById('btn-save-exercise-photo');
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        img.src = e.target.result;
+        preview.style.display = 'block';
+        saveBtn.style.display = 'inline-flex';
+        this._pendingExercisePhoto = { exerciseId, base64: e.target.result };
+      };
+      reader.readAsDataURL(file);
+    } else {
+      preview.style.display = 'none';
+      saveBtn.style.display = 'none';
+      this._pendingExercisePhoto = null;
+    }
+  }
+
+  async saveExercisePhoto(exerciseId) {
+    const pending = this._pendingExercisePhoto;
+    if (!pending || pending.exerciseId !== exerciseId || !pending.base64) {
+      return this.toast('Selecciona una foto primero', 'error');
+    }
+
+    try {
+      this.toast('Guardando foto...', 'info');
+      await DB.saveExercisePhoto({
+        userId: this.user.id,
+        exerciseId,
+        base64: pending.base64,
+      });
+      this.toast('Foto guardada', 'success');
+      const currentContainer = document.getElementById('exercise-photo-current');
+      if (currentContainer) {
+        currentContainer.innerHTML = `<img src="${pending.base64}" alt="Ejercicio" style="width:100%;border-radius:8px">`;
+      }
+      this._pendingExercisePhoto = null;
+      document.getElementById('btn-save-exercise-photo').style.display = 'none';
+      document.getElementById('exercise-photo-preview').style.display = 'none';
+    } catch (err) {
+      console.error('Error saving exercise photo:', err);
       this.toast('Error al guardar la foto', 'error');
     }
   }

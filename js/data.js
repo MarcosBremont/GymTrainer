@@ -577,7 +577,7 @@ const GIF_MAPPING = {
   'jalon-al-pecho-con-agarre-neutro-triangulo': 'neutral_grip_lat_pulldown.gif',
   'remo-con-barra-sentado': 'seated_cable_row.gif',
   'remo-con-mancuernas-en-banco-inclinado': 'dumbbell_row.gif',
-  'remo-con-barra-tumbado-prono': 'barbell_row.gif',
+  'remo-con-barra-tumbado-prono': 'barbell_bent_over_row.gif',
   'remo-en-maquina': 'machine_row.gif',
   'face-pull-con-cuerda': 'face_pull.gif',
   'encogimiento-de-hombros-shrugs-con-barra': 'barbell_shrug.gif',
@@ -593,12 +593,12 @@ const GIF_MAPPING = {
   'snatch-grip-deadlift': 'snatch_grip_deadlift.gif',
 
   // Piernas
-  'sentadillas-con-barra': 'barbell_squat.gif',
-  'sentadillas-frontales-con-barra': 'barbell_front_squat.gif',
+  'sentadillas-con-barra': 'barbell_full_squat.gif',
+  'sentadillas-frontales-con-barra': 'landmine_front_squat.gif',
   'sentadillas-bulgarian-split-squats-con-mancuernas': 'dumbbell_bulgarian_split_squat.gif',
   'sentadillas-con-mancuernas': 'dumbbell_goblet_squat.gif',
   'sentadillas-sissy-squats': 'sissy_squat.gif',
-  'prensa-de-piernas-leg-press': 'leg_press.gif',
+  'prensa-de-piernas-leg-press': 'sled_45_leg_wide_press.gif',
   'prensa-de-piernas-45-grados': '45_degree_leg_press.gif',
   'prensa-de-piernas-horizontal': 'horizontal_leg_press.gif',
   'extensiones-de-cuadriceps-en-maquina': 'leg_extension.gif',
@@ -853,6 +853,20 @@ export class DB {
 
   static async deleteCustomExercise(id) {
     await deleteDoc(doc(db, 'customExercises', id));
+  }
+
+  /* ---- EXERCISE PHOTOS ---- */
+  static async getExercisePhoto(userId, exerciseId) {
+    const docId = `${userId}_${exerciseId}`;
+    const snap = await getDoc(doc(db, 'exercisePhotos', docId));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  }
+
+  static async saveExercisePhoto(photo) {
+    const { userId, exerciseId, base64 } = photo;
+    const docId = `${userId}_${exerciseId}`;
+    await setDoc(doc(db, 'exercisePhotos', docId), { userId, exerciseId, base64, updatedAt: serverTimestamp() }, { merge: true });
+    return docId;
   }
 
   /* ---- PROGRESS PHOTOS ---- */
