@@ -535,6 +535,13 @@ export const EXERCISE_LIBRARY = {
   }
 };
 
+// Add GIF paths to exercises
+Object.values(EXERCISE_LIBRARY).forEach(group => {
+  group.exercises.forEach(ex => {
+    ex.gif = `assets/gifs/${ex.id}.gif`;
+  });
+});
+
 export const MEAL_SLOTS = [
   { key: 'desayuno',    label: 'Desayuno',      icon: '☀️', time: '7:00 - 8:00 AM'  },
   { key: 'mediaManana', label: 'Media Mañana',  icon: '🍎', time: '10:00 - 11:00 AM' },

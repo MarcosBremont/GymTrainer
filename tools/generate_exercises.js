@@ -524,7 +524,7 @@ Saltos dobles a la comba (Double unders) - Cardio / Pantorrillas
 SkiErg (Máquina de esquí) - Espalda / Core / Cardio
 `;
 
-const lines = text.trim().split('\\n');
+const lines = text.trim().split('\n');
 let currentCategory = '';
 const exercisesByCat = {
     pecho: [],
@@ -554,7 +554,7 @@ const categoryMap = {
 const idify = (name) => {
     return name.split(' -')[0].trim()
         .toLowerCase()
-        .normalize('NFD').replace(/[\\u0300-\\u036f]/g, "") // remove accents
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
         .replace(/[^a-z0-9]/g, '-') // replace non-alphanumeric with dash
         .replace(/-+/g, '-') // remove extra dashes
         .replace(/^-|-$/g, ''); // remove leading/trailing dashes
@@ -564,8 +564,10 @@ lines.forEach(line => {
     line = line.trim();
     if (!line) return;
 
-    if (line.includes('(') && line.endsWith(')')) {
-        const catName = line.split('(')[0].trim();
+    // Category headers look like: "Pecho (1 - 60)" — number range at the end
+    const catMatch = line.match(/^(.+?)\s*\(\d+\s*-\s*\d+\)\s*$/);
+    if (catMatch) {
+        const catName = catMatch[1].trim();
         if (categoryMap[catName]) {
             currentCategory = categoryMap[catName];
         }
@@ -585,36 +587,36 @@ lines.forEach(line => {
     }
 });
 
-const outputData = \`export const EXERCISE_LIBRARY = {
+const outputData = `export const EXERCISE_LIBRARY = {
   pecho: {
     label: 'Pecho', icon: '🫁', color: 'var(--pecho)',
-    exercises: \${JSON.stringify(exercisesByCat.pecho, null, 2)}
+    exercises: ${JSON.stringify(exercisesByCat.pecho, null, 2)}
   },
   espalda: {
     label: 'Espalda', icon: '🔙', color: 'var(--espalda)',
-    exercises: \${JSON.stringify(exercisesByCat.espalda, null, 2)}
+    exercises: ${JSON.stringify(exercisesByCat.espalda, null, 2)}
   },
   piernas: {
     label: 'Piernas', icon: '🦵', color: 'var(--piernas)',
-    exercises: \${JSON.stringify(exercisesByCat.piernas, null, 2)}
+    exercises: ${JSON.stringify(exercisesByCat.piernas, null, 2)}
   },
   hombros: {
     label: 'Hombros', icon: '💪', color: 'var(--hombros)',
-    exercises: \${JSON.stringify(exercisesByCat.hombros, null, 2)}
+    exercises: ${JSON.stringify(exercisesByCat.hombros, null, 2)}
   },
   brazos: {
     label: 'Brazos', icon: '🦾', color: 'var(--brazos)',
-    exercises: \${JSON.stringify(exercisesByCat.brazos, null, 2)}
+    exercises: ${JSON.stringify(exercisesByCat.brazos, null, 2)}
   },
   core: {
     label: 'Core / Abdomen', icon: '🎯', color: 'var(--core)',
-    exercises: \${JSON.stringify(exercisesByCat.core, null, 2)}
+    exercises: ${JSON.stringify(exercisesByCat.core, null, 2)}
   },
   cardio: {
     label: 'Cardio', icon: '🏃', color: 'var(--cardio)',
-    exercises: \${JSON.stringify(exercisesByCat.cardio, null, 2)}
+    exercises: ${JSON.stringify(exercisesByCat.cardio, null, 2)}
   }
-};\`;
+}`;
 
 fs.writeFileSync('tools/output_library.js', outputData, 'utf8');
 console.log('Done writing tools/output_library.js');

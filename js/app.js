@@ -1237,6 +1237,7 @@ class GymApp {
         ${muscleGroup === '__custom__' ? '<div style="margin-top:4px"><span class="badge-custom-ex">✏️ Personalizado</span></div>' : ''}
         ${ex.instructions ? `<div style="margin-top:6px;font-size:.78rem;opacity:.85">${ex.instructions}</div>` : ''}
         ${ex.description  ? `<div style="margin-top:6px;font-size:.78rem;opacity:.85">${ex.description}</div>`  : ''}
+        ${ex.gif ? `<img src="${ex.gif}" alt="${ex.name}" style="width:100%;max-width:300px;border-radius:8px;margin-top:10px">` : ''}
       </div>
       <form id="ex-config-form">
         <div class="form-row">

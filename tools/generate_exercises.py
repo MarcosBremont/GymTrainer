@@ -537,32 +537,37 @@ exercises_by_cat = {
 }
 
 def idify(name):
-    from unidecode import unidecode
+    _accents = str.maketrans("áéíóúüñàèìòùâêîôûäëïöü", "aeiouunaeiouaeiouaeiou")
     name = name.split(" -")[0].strip()
-    return unidecode(name.lower().replace(" ", "-").replace("(", "").replace(")", ""))
+    return name.lower().replace(" ", "-").replace("(", "").replace(")", "").translate(_accents)
 
-category_map = {
-    "Pecho": "pecho",
-    "Espalda": "espalda",
-    "Hombros": "hombros",
-    "Piernas - Cuádriceps": "piernas",
-    "Piernas - Femorales, Glúteos y Cadera": "piernas",
-    "Pantorrillas y Tibiales": "piernas",
-    "Bíceps y Antebrazos": "brazos",
-    "Tríceps": "brazos",
-    "Antebrazos y Cuello": "brazos",
-    "Core y Abdomen": "core",
-    "Cuerpo Completo, Halterofilia, Pliometría y Cardio funcional": "cardio"
-}
+def get_category(cat_name: str) -> str:
+    mapping: dict[str, str] = {
+        "Pecho": "pecho",
+        "Espalda": "espalda",
+        "Hombros": "hombros",
+        "Piernas - Cuádriceps": "piernas",
+        "Piernas - Femorales, Glúteos y Cadera": "piernas",
+        "Pantorrillas y Tibiales": "piernas",
+        "Bíceps y Antebrazos": "brazos",
+        "Tríceps": "brazos",
+        "Antebrazos y Cuello": "brazos",
+        "Core y Abdomen": "core",
+        "Cuerpo Completo, Halterofilia, Pliometria y Cardio funcional": "cardio",
+    }
+    return mapping.get(cat_name, "")
 
 for line in lines:
     line = line.strip()
     if not line: continue
-    
-    if "(" in line and line.endswith(")"):
-        cat_name = line.split("(")[0].strip()
-        if cat_name in category_map:
-            current_category = category_map[cat_name]
+
+    # Category headers look like: "Pecho (1 - 60)" — a number range at the end
+    cat_match = re.match(r"^(.+?)\s*\(\d+\s*-\s*\d+\)\s*$", line)
+    if cat_match:
+        cat_name = cat_match.group(1).strip()
+        mapped: str = get_category(cat_name)
+        if mapped:
+            current_category = mapped
     elif " - " in line:
         ex_name = line.split(" - ")[0].strip()
         ex_id = idify(ex_name)
