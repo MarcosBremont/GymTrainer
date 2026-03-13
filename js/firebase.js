@@ -6,6 +6,7 @@ import { initializeApp }       from 'https://www.gstatic.com/firebasejs/10.11.0/
 import { getAuth }              from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
 import { initializeFirestore,
          persistentLocalCache } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js';
+import { getStorage }           from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js';
 
 const firebaseConfig = {
   apiKey:            'AIzaSyAp2sD_c3SVHPz7jwmUsaj67GVn3k-KhfI',
@@ -30,3 +31,6 @@ export const secondaryAuth = getAuth(secondaryApp);
 export const db = initializeFirestore(primaryApp, {
   localCache: persistentLocalCache(),
 });
+
+// Firebase Storage
+export const storage = getStorage(primaryApp);

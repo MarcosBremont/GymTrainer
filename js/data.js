@@ -2,7 +2,7 @@
    GymTrainer Pro - Data Layer (Firestore)
    =================================================== */
 
-import { db, secondaryAuth }  from './firebase.js';
+import { db, secondaryAuth, storage }  from './firebase.js';
 import {
   doc, getDoc, getDocs, setDoc, addDoc, deleteDoc,
   collection, query, where, serverTimestamp,
@@ -12,6 +12,9 @@ import {
   signInWithEmailAndPassword,
   signOut,
 } from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js';
+import {
+  ref, uploadBytes, getDownloadURL, deleteObject,
+} from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-storage.js';
 
 // ── Unique ID (used only for sub-objects, not Firestore docs) ────
 export function uid() {
@@ -698,6 +701,42 @@ export class DB {
 
   static async deleteCustomExercise(id) {
     await deleteDoc(doc(db, 'customExercises', id));
+  }
+
+  /* ---- PROGRESS PHOTOS ---- */
+  static async getProgressPhotosByClient(clientId) {
+    const q = query(collection(db, 'progressPhotos'), where('clientId', '==', clientId));
+    const snap = await getDocs(q);
+    return snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+  }
+
+  static async saveProgressPhoto(photo) {
+    const { id, ...data } = photo;
+    if (id) {
+      await setDoc(doc(db, 'progressPhotos', id), data, { merge: true });
+      return id;
+    } else {
+      const ref = await addDoc(collection(db, 'progressPhotos'), data);
+      return ref.id;
+    }
+  }
+
+  static async deleteProgressPhoto(id) {
+    await deleteDoc(doc(db, 'progressPhotos', id));
+  }
+
+  static async uploadProgressPhoto(file, clientId, date) {
+    const fileName = `${clientId}/${date}/${Date.now()}_${file.name}`;
+    const storageRef = ref(storage, `progressPhotos/${fileName}`);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
+  }
+
+  static async deleteProgressPhotoFile(url) {
+    const storageRef = ref(storage, url);
+    await deleteObject(storageRef);
   }
 
   /* ---- DEMO DATA INITIALIZATION ---- */

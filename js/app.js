@@ -1381,6 +1381,18 @@ class GymApp {
       </div>`;
   }
 
+  photoCardHTML(photo) {
+    return `
+      <div class="photo-card">
+        <img src="${photo.url}" alt="Foto de progreso" onclick="app.viewPhoto('${photo.url}')">
+        <div class="photo-info">
+          <div class="photo-date">${formatDate(photo.date)}</div>
+          ${photo.notes ? `<div class="photo-notes">${photo.notes}</div>` : ''}
+        </div>
+        <button class="btn btn-danger btn-sm photo-delete" onclick="app.confirmDeletePhoto('${photo.id}', '${photo.url}')">🗑</button>
+      </div>`;
+  }
+
   async renderNutricion() {
     const isTrainer = this.user.role === 'trainer';
     const plans     = isTrainer
@@ -1823,6 +1835,111 @@ class GymApp {
     this.navigate('medidas', { clientId });
   }
 
+  openPhotoModal(clientId) {
+    const today = todayStr();
+    this.openModal('Agregar Foto de Progreso', `
+      <form id="photo-form" onsubmit="app.savePhoto(event, '${clientId}')">
+        <div class="form-group">
+          <label>Fecha *</label>
+          <input type="date" id="photo-date" value="${today}" max="${today}" required>
+        </div>
+        <div class="form-group">
+          <label>Seleccionar o Tomar Foto *</label>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <button type="button" class="btn btn-outline btn-sm" onclick="app.selectPhotoFile()">📁 Galería</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="app.takePhoto()">📷 Cámara</button>
+          </div>
+          <input type="file" id="photo-file" accept="image/*" style="display:none" onchange="app.previewPhoto(this)">
+          <div id="photo-preview" style="margin-top:10px;display:none">
+            <img id="preview-img" style="max-width:100%;max-height:200px;border-radius:8px">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Notas (opcional)</label>
+          <textarea id="photo-notes" placeholder="Comentarios sobre la foto..." rows="3"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" onclick="app.closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Guardar Foto</button>
+        </div>
+      </form>`);
+  }
+
+  selectPhotoFile() {
+    document.getElementById('photo-file').click();
+  }
+
+  takePhoto() {
+    const input = document.getElementById('photo-file');
+    input.setAttribute('capture', 'environment');
+    input.click();
+    // Reset after selection
+    input.addEventListener('change', () => input.removeAttribute('capture'), { once: true });
+  }
+
+  previewPhoto(input) {
+    const file = input.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        document.getElementById('preview-img').src = e.target.result;
+        document.getElementById('photo-preview').style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    } else {
+      document.getElementById('photo-preview').style.display = 'none';
+    }
+  }
+
+  async savePhoto(event, clientId) {
+    event.preventDefault();
+    const date = document.getElementById('photo-date').value;
+    const file = document.getElementById('photo-file').files[0];
+    const notes = document.getElementById('photo-notes').value.trim();
+
+    if (!file) return this.toast('Selecciona una foto', 'error');
+
+    try {
+      this.toast('Subiendo foto...', 'info');
+      const url = await DB.uploadProgressPhoto(file, clientId, date);
+      await DB.saveProgressPhoto({ clientId, date, url, notes, uploadedBy: this.user.id, uploadedAt: new Date().toISOString() });
+      this.closeModal();
+      this.toast('Foto guardada exitosamente');
+      this.navigate('progreso', { clientId });
+    } catch (err) {
+      console.error('Error saving photo:', err);
+      this.toast('Error al guardar la foto', 'error');
+    }
+  }
+
+  viewPhoto(url) {
+    this.openModal('Foto de Progreso', `<img src="${url}" style="max-width:100%;max-height:70vh;border-radius:8px">`, true);
+  }
+
+  async confirmDeletePhoto(photoId, url) {
+    this.openModal('Eliminar Foto', `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:3rem;margin-bottom:12px">🗑️</div><p>¿Eliminar esta foto de progreso?</p>
+        <div class="form-actions" style="justify-content:center;margin-top:20px">
+          <button class="btn btn-ghost" onclick="app.closeModal()">Cancelar</button>
+          <button class="btn btn-danger" onclick="app._deletePhoto('${photoId}','${url}')">Eliminar</button>
+        </div>
+      </div>`);
+  }
+
+  async _deletePhoto(photoId, url) {
+    try {
+      await DB.deleteProgressPhotoFile(url);
+      await DB.deleteProgressPhoto(photoId);
+      this.closeModal();
+      this.toast('Foto eliminada');
+      this.navigate(this.view, this.viewParams);
+    } catch (err) {
+      console.error('Error deleting photo:', err);
+      this.toast('Error al eliminar la foto', 'error');
+    }
+  }
+
   // ════════════════════════════════════════════════════
   // PROGRESS CHARTS
   // ════════════════════════════════════════════════════
@@ -1839,6 +1956,7 @@ class GymApp {
     const cid      = clientId || this.user.id;
     const client   = await DB.getUser(cid);
     const measures = (await DB.getMeasurementsByClient(cid)).reverse();
+    const photos   = await DB.getProgressPhotosByClient(cid);
 
     return `
       <div class="view-header">
@@ -1858,6 +1976,13 @@ class GymApp {
         <div class="chart-card"><div class="chart-title">📐 Medidas Corporales (cm)</div><div class="chart-wrap" style="height:250px"><canvas id="chart-measures"></canvas></div></div>
         <div class="chart-card"><div class="chart-title">💪 Brazos (cm)</div><div class="chart-wrap"><canvas id="chart-arms"></canvas></div></div>
         <div class="card" style="margin-top:8px"><div class="section-title" style="margin-bottom:12px">Resumen de cambios</div>${this.progressSummaryHTML(measures)}</div>
+        <div class="card" style="margin-top:8px">
+          <div class="section-header">
+            <span class="section-title">📸 Fotos de Progreso</span>
+            <button class="btn btn-outline btn-sm" onclick="app.openPhotoModal('${cid}')">Agregar Foto</button>
+          </div>
+          ${photos.length ? `<div class="photos-grid">${photos.map(p => this.photoCardHTML(p)).join('')}</div>` : '<div class="empty-state" style="padding:20px"><div class="empty-icon">📷</div><p>No hay fotos de progreso aún</p></div>'}
+        </div>
       `}`;
   }
 
