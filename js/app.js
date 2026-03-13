@@ -1382,14 +1382,15 @@ class GymApp {
   }
 
   photoCardHTML(photo) {
+    const src = photo.base64 || photo.url;
     return `
       <div class="photo-card">
-        <img src="${photo.url}" alt="Foto de progreso" onclick="app.viewPhoto('${photo.url}')">
+        <img src="${src}" alt="Foto de progreso" onclick="app.viewPhoto('${src}')">
         <div class="photo-info">
           <div class="photo-date">${formatDate(photo.date)}</div>
           ${photo.notes ? `<div class="photo-notes">${photo.notes}</div>` : ''}
         </div>
-        <button class="btn btn-danger btn-sm photo-delete" onclick="app.confirmDeletePhoto('${photo.id}', '${photo.url}')">🗑</button>
+        <button class="btn btn-danger btn-sm photo-delete" onclick="app.confirmDeletePhoto('${photo.id}')">🗑</button>
       </div>`;
   }
 
@@ -1891,6 +1892,30 @@ class GymApp {
     }
   }
 
+  async fileToDataURL(file, maxWidth = 800, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = reject;
+        img.onload = () => {
+          const ratio = Math.min(1, maxWidth / img.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width * ratio;
+          canvas.height = img.height * ratio;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const type = file.type || 'image/jpeg';
+          const dataUrl = canvas.toDataURL(type, quality);
+          resolve(dataUrl);
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   async savePhoto(event, clientId) {
     event.preventDefault();
     const date = document.getElementById('photo-date').value;
@@ -1900,9 +1925,16 @@ class GymApp {
     if (!file) return this.toast('Selecciona una foto', 'error');
 
     try {
-      this.toast('Subiendo foto...', 'info');
-      const url = await DB.uploadProgressPhoto(file, clientId, date);
-      await DB.saveProgressPhoto({ clientId, date, url, notes, uploadedBy: this.user.id, uploadedAt: new Date().toISOString() });
+      this.toast('Procesando foto...', 'info');
+      const base64 = await this.fileToDataURL(file);
+      await DB.saveProgressPhoto({
+        clientId,
+        date,
+        base64,
+        notes,
+        uploadedBy: this.user.id,
+        uploadedAt: new Date().toISOString(),
+      });
       this.closeModal();
       this.toast('Foto guardada exitosamente');
       this.navigate('progreso', { clientId });
@@ -1916,20 +1948,19 @@ class GymApp {
     this.openModal('Foto de Progreso', `<img src="${url}" style="max-width:100%;max-height:70vh;border-radius:8px">`, true);
   }
 
-  async confirmDeletePhoto(photoId, url) {
+  async confirmDeletePhoto(photoId) {
     this.openModal('Eliminar Foto', `
       <div style="text-align:center;padding:20px 0">
         <div style="font-size:3rem;margin-bottom:12px">🗑️</div><p>¿Eliminar esta foto de progreso?</p>
         <div class="form-actions" style="justify-content:center;margin-top:20px">
           <button class="btn btn-ghost" onclick="app.closeModal()">Cancelar</button>
-          <button class="btn btn-danger" onclick="app._deletePhoto('${photoId}','${url}')">Eliminar</button>
+          <button class="btn btn-danger" onclick="app._deletePhoto('${photoId}')">Eliminar</button>
         </div>
       </div>`);
   }
 
-  async _deletePhoto(photoId, url) {
+  async _deletePhoto(photoId) {
     try {
-      await DB.deleteProgressPhotoFile(url);
       await DB.deleteProgressPhoto(photoId);
       this.closeModal();
       this.toast('Foto eliminada');
