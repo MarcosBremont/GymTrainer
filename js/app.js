@@ -498,7 +498,7 @@ class GymApp {
     overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;cursor:pointer';
     overlay.innerHTML = `
       <div style="color:#fff;font-size:1.1rem;font-weight:600;margin-bottom:12px;text-align:center">${name}</div>
-      <img src="${src}" alt="${name}" style="max-width:90%;max-height:75vh;${isPhoto ? 'border-radius:50%;aspect-ratio:1;object-fit:cover;width:min(75vh,90vw)' : 'border-radius:12px'};box-shadow:0 8px 32px rgba(0,0,0,.5)"/>
+      <img src="${src}" alt="${name}" style="max-width:90%;max-height:75vh;${isPhoto ? 'border-radius:50%;aspect-ratio:1;object-fit:cover;width:320px;max-width:320px' : 'border-radius:12px'};box-shadow:0 8px 32px rgba(0,0,0,.5)"/>
       <div style="color:var(--text2);font-size:.85rem;margin-top:14px">Toca para cerrar</div>`;
     overlay.onclick = () => overlay.remove();
     document.body.appendChild(overlay);
