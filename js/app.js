@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.2.1';
+const APP_VERSION = 'v1.3.0';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -46,6 +46,18 @@ function imcCategory(imc) {
   return              { label: 'Obesidad',      cls: 'badge-accent'  };
 }
 function dayLabel(key) { return DAYS_OF_WEEK.find(d => d.key === key)?.label || key; }
+function getNextPaymentInfo(paymentDay) {
+  if (!paymentDay) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const y = today.getFullYear(), m = today.getMonth();
+  let next = new Date(y, m, paymentDay); next.setHours(0,0,0,0);
+  if (next < today) next = new Date(y, m + 1, paymentDay);
+  // Ajustar si el día no existe en el mes (ej: 31 en febrero)
+  if (next.getDate() !== paymentDay) next = new Date(next.getFullYear(), next.getMonth(), 0);
+  const diff = Math.ceil((next - today) / 86400000);
+  const dateStr = next.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  return { date: next, dateStr, daysLeft: diff };
+}
 function getMuscleInfo(group) { return EXERCISE_LIBRARY[group] || { label: group, icon: '🏋️', color: 'var(--primary)' }; }
 function getExerciseGif(exerciseId) {
   if (!exerciseId) return null;
@@ -507,12 +519,31 @@ class GymApp {
     const hour     = new Date().getHours();
     const greeting = hour < 12 ? 'Buenos días' : hour < 20 ? 'Buenas tardes' : 'Buenas noches';
 
+    const urgentPay = clients.filter(c => {
+      if (!c.paymentDay) return false;
+      const pi = getNextPaymentInfo(c.paymentDay);
+      return pi && pi.daysLeft <= 3;
+    }).map(c => ({ ...c, _payInfo: getNextPaymentInfo(c.paymentDay) }));
+
     return `
       <div class="welcome-card slide-up">
         <div class="welcome-title">${greeting}, ${this.user.name.split(' ')[0]} 👋</div>
         <div class="welcome-subtitle">${new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</div>
         <div class="welcome-cta"><button class="btn btn-primary btn-sm" onclick="app.navigate('clientes')">Ver mis clientes</button></div>
       </div>
+      ${urgentPay.length ? `
+        <div class="today-card" style="border:1px solid #ffa040;background:rgba(255,160,64,0.08);margin-bottom:16px">
+          <div class="today-card-header" style="color:#ffa040"><strong>💳 Pagos próximos</strong><span class="badge" style="background:rgba(255,160,64,0.2);color:#ffa040">${urgentPay.length}</span></div>
+          <div class="today-card-body" style="padding:8px 12px">
+            ${urgentPay.map(c => {
+              const color = c._payInfo.daysLeft === 0 ? 'var(--accent)' : '#ffa040';
+              return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+                <div><strong>${c.name}</strong><span style="color:var(--text2);margin-left:8px;font-size:.82rem">${c.paymentAmount||''}</span></div>
+                <span style="color:${color};font-weight:600;font-size:.85rem">${c._payInfo.daysLeft === 0 ? '¡Hoy!' : `en ${c._payInfo.daysLeft} día${c._payInfo.daysLeft>1?'s':''}`}</span>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>` : ''}
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-icon" style="background:rgba(108,99,255,0.15)">👥</div><div class="stat-info"><strong>${clients.length}</strong><span>Clientes</span></div></div>
         <div class="stat-card"><div class="stat-icon" style="background:rgba(78,205,196,0.15)">📋</div><div class="stat-info"><strong>${routines.length}</strong><span>Rutinas</span></div></div>
@@ -543,12 +574,22 @@ class GymApp {
     const todayKey  = DAYS_OF_WEEK[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1].key;
     const todayR    = routines.filter(r => r.daysOfWeek?.includes(todayKey));
 
+    const payInfo = getNextPaymentInfo(this.user.paymentDay);
+    const payBanner = payInfo ? (() => {
+      const d = payInfo.daysLeft;
+      const amt = this.user.paymentAmount ? ` · ${this.user.paymentAmount}` : '';
+      if (d === 0) return `<div class="today-card" style="border:1px solid var(--accent);background:rgba(255,107,107,0.1);margin-bottom:16px"><div class="today-card-header" style="color:var(--accent)"><strong>🔴 ¡Hoy es tu día de pago!</strong></div><div class="today-card-body" style="padding:12px;color:var(--text2)">Tu pago vence hoy${amt}. Contacta a tu entrenador.</div></div>`;
+      if (d <= 3) return `<div class="today-card" style="border:1px solid #ffa040;background:rgba(255,160,64,0.1);margin-bottom:16px"><div class="today-card-header" style="color:#ffa040"><strong>🟠 Pago próximo en ${d} día${d>1?'s':''}</strong></div><div class="today-card-body" style="padding:12px;color:var(--text2)">Próximo pago: ${payInfo.dateStr}${amt}</div></div>`;
+      return `<div class="today-card" style="margin-bottom:16px"><div class="today-card-header"><strong>💳 Próximo pago</strong><span class="badge badge-green">${d} días</span></div><div class="today-card-body" style="padding:12px;color:var(--text2)">${payInfo.dateStr}${amt}</div></div>`;
+    })() : '';
+
     return `
       <div class="welcome-card slide-up">
         <div class="welcome-title">¡Hola, ${this.user.name.split(' ')[0]}! 💪</div>
         <div class="welcome-subtitle">${new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</div>
         ${trainer ? `<div class="welcome-subtitle" style="margin-top:6px">👨‍💼 Entrenador: ${trainer.name}</div>` : ''}
       </div>
+      ${payBanner}
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-icon" style="background:rgba(108,99,255,0.15)">📋</div><div class="stat-info"><strong>${routines.length}</strong><span>Rutinas asig.</span></div></div>
         <div class="stat-card"><div class="stat-icon" style="background:rgba(255,154,60,0.15)">🥗</div><div class="stat-info"><strong>${meals.length}</strong><span>Planes nutri.</span></div></div>
@@ -594,6 +635,7 @@ class GymApp {
           <div class="client-name">${c.name}</div>
           <div class="client-meta">🎯 ${c.goal||'Sin objetivo'}</div>
           ${targetView === 'client-detail' ? `<div class="client-meta">📋 ${routineCount} rutinas · ⚖️ ${lastMeasureWeight ? lastMeasureWeight+'kg' : 'Sin medidas'}</div>` : ''}
+          ${c.paymentDay ? (() => { const pi = getNextPaymentInfo(c.paymentDay); const color = pi.daysLeft === 0 ? 'var(--accent)' : pi.daysLeft <= 3 ? '#ffa040' : 'var(--text3)'; return `<div class="client-meta" style="color:${color}">💳 Pago: ${pi.daysLeft === 0 ? '¡Hoy!' : pi.daysLeft <= 3 ? `en ${pi.daysLeft} día${pi.daysLeft>1?'s':''}` : `día ${c.paymentDay}`}</div>`; })() : ''}
         </div>
         ${targetView === 'client-detail' ? `
         <div class="client-actions" onclick="event.stopPropagation()">
@@ -672,6 +714,20 @@ class GymApp {
         ${client.goal ? `<p style="color:var(--text2);margin-top:12px;font-size:.88rem">🎯 ${client.goal}</p>` : ''}
       </div>
 
+      ${client.paymentDay ? (() => {
+        const pi = getNextPaymentInfo(client.paymentDay);
+        const amt = client.paymentAmount ? ` · ${client.paymentAmount}` : '';
+        const urgent = pi.daysLeft <= 3;
+        const color = pi.daysLeft === 0 ? 'var(--accent)' : pi.daysLeft <= 3 ? '#ffa040' : 'var(--green)';
+        return `<div class="card card-sm" style="margin-bottom:20px;border:1px solid ${color}30;background:${color}10">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div><strong style="color:${color}">💳 Pago</strong><span style="color:var(--text2);margin-left:8px;font-size:.85rem">Día ${client.paymentDay} de cada mes${amt}</span></div>
+            <span class="badge" style="background:${color}20;color:${color}">${pi.daysLeft === 0 ? '¡Hoy!' : pi.daysLeft + ' días'}</span>
+          </div>
+          <div style="color:var(--text2);font-size:.8rem;margin-top:4px">Próximo: ${pi.dateStr}</div>
+        </div>`;
+      })() : ''}
+
       ${latest ? `
         <div class="stats-grid" style="margin-bottom:20px">
           <div class="stat-card"><div class="stat-icon" style="background:rgba(108,99,255,0.15)">⚖️</div><div class="stat-info"><strong>${latest.weight}kg</strong><span>Peso actual</span></div></div>
@@ -745,6 +801,10 @@ class GymApp {
           </div>
           <div class="form-group"><label>Objetivo</label><input type="text" name="goal" value="${client?.goal||''}" placeholder="Ej: Ganar masa muscular…"/></div>
         </div>
+        <div class="form-row">
+          <div class="form-group"><label>Día de pago (del mes)</label><input type="number" name="paymentDay" min="1" max="31" value="${client?.paymentDay||''}" placeholder="Ej: 15"/></div>
+          <div class="form-group"><label>Monto mensual</label><input type="text" name="paymentAmount" value="${client?.paymentAmount||''}" placeholder="Ej: $2,000"/></div>
+        </div>
         <div class="form-group"><label>Notas</label><textarea name="notes">${client?.notes||''}</textarea></div>
         <p id="client-form-err" class="form-error hidden"></p>
         <div class="form-actions">
@@ -764,7 +824,7 @@ class GymApp {
         const fd   = new FormData(e.target);
         const data = Object.fromEntries(fd.entries());
         if (client) {
-          await DB.saveUser({ ...client, name: data.name, phone: data.phone, age: parseInt(data.age)||null, level: data.level, goal: data.goal, notes: data.notes });
+          await DB.saveUser({ ...client, name: data.name, phone: data.phone, age: parseInt(data.age)||null, level: data.level, goal: data.goal, notes: data.notes, paymentDay: parseInt(data.paymentDay)||null, paymentAmount: data.paymentAmount||'' });
           this.toast('Cliente actualizado');
         } else {
           // Create Firebase Auth account using secondary auth
@@ -775,6 +835,7 @@ class GymApp {
             id: newUid, role: 'client', trainerId: this.user.id,
             name: data.name, email: data.email, phone: data.phone,
             age: parseInt(data.age)||null, level: data.level, goal: data.goal, notes: data.notes,
+            paymentDay: parseInt(data.paymentDay)||null, paymentAmount: data.paymentAmount||'',
             avatar: ['💪','🏃','🧘','🏋️','⚡','🔥'][Math.floor(Math.random()*6)],
             color: randomColor(), joinDate: todayStr(), active: true,
           });
