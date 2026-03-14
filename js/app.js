@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.1.0';
+const APP_VERSION = 'v1.2.0';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -47,6 +47,22 @@ function imcCategory(imc) {
 }
 function dayLabel(key) { return DAYS_OF_WEEK.find(d => d.key === key)?.label || key; }
 function getMuscleInfo(group) { return EXERCISE_LIBRARY[group] || { label: group, icon: '🏋️', color: 'var(--primary)' }; }
+function getExerciseGif(exerciseId) {
+  if (!exerciseId) return null;
+  for (const gk in EXERCISE_LIBRARY) {
+    const found = EXERCISE_LIBRARY[gk].exercises.find(e => e.id === exerciseId);
+    if (found?.gif) return found.gif;
+  }
+  return null;
+}
+function exerciseThumbHTML(ex, size = '48px', fontSize = '1.5rem') {
+  const m = getMuscleInfo(ex.muscleGroup);
+  const gif = getExerciseGif(ex.exerciseId);
+  if (gif) {
+    return `<div class="exercise-thumb" style="width:${size};height:${size};border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0"><img src="${gif}" alt="${ex.name}" style="width:100%;height:100%;object-fit:cover"/></div>`;
+  }
+  return `<div class="exercise-thumb" style="background:${m.color};width:${size};height:${size};font-size:${fontSize}">${m.icon}</div>`;
+}
 
 // ── GymApp ───────────────────────────────────────────
 class GymApp {
@@ -534,9 +550,8 @@ class GymApp {
             <div class="today-card-header"><strong>📋 ${r.name}</strong><span class="badge badge-green">${r.exercises.length} ejercicios</span></div>
             <div class="today-card-body">
               ${r.exercises.slice(0,3).map(ex => {
-                const m = getMuscleInfo(ex.muscleGroup);
                 return `<div class="exercise-item" style="padding:10px 0;border-bottom:1px solid var(--border)">
-                  <div class="exercise-thumb" style="background:${m.color}">${m.icon}</div>
+                  ${exerciseThumbHTML(ex)}
                   <div class="exercise-info"><div class="exercise-name">${ex.name}</div><div class="exercise-details">${ex.sets} series × ${ex.reps} · ${ex.weight}</div></div>
                 </div>`;
               }).join('')}
@@ -819,9 +834,8 @@ class GymApp {
         <div class="routine-days">${(routine.daysOfWeek||[]).map(d=>`<span class="day-tag">${dayLabel(d)}</span>`).join('')}</div>
         <div class="exercise-list">
           ${routine.exercises.slice(0,4).map((ex,i)=>{
-            const m = getMuscleInfo(ex.muscleGroup);
             return `<div class="exercise-item"><span class="exercise-order">${i+1}</span>
-              <div class="exercise-thumb" style="background:${m.color}">${m.icon}</div>
+              ${exerciseThumbHTML(ex)}
               <div class="exercise-info"><div class="exercise-name">${ex.name}</div>
               <div class="exercise-stats"><span class="exercise-stat">${ex.sets} series</span><span class="exercise-stat">${ex.reps} reps</span>${ex.weight?`<span class="exercise-stat">⚖️ ${ex.weight}</span>`:''}</div></div></div>`;
           }).join('')}
@@ -884,7 +898,7 @@ class GymApp {
             const m = getMuscleInfo(ex.muscleGroup);
             return `<div class="exercise-item" style="border-bottom:1px solid var(--border)">
               <span class="exercise-order">${i+1}</span>
-              <div class="exercise-thumb" style="background:${m.color};width:60px;height:60px;font-size:1.8rem">${m.icon}</div>
+              ${exerciseThumbHTML(ex, '60px', '1.8rem')}
               <div class="exercise-info">
                 <div class="exercise-name" style="font-size:1rem">${ex.name}</div>
                 <div class="exercise-details">${m.label}${ex.rest ? ` · ⏱ ${ex.rest}s descanso` : ''}</div>
@@ -927,8 +941,7 @@ class GymApp {
     }
 
     const renderExList = () => this._builderExercises.map((ex,i) => {
-      const m = getMuscleInfo(ex.muscleGroup);
-      return `<div class="added-ex-item"><div class="exercise-thumb" style="background:${m.color};width:40px;height:40px;font-size:1.2rem;border-radius:8px">${m.icon}</div>
+      return `<div class="added-ex-item">${exerciseThumbHTML(ex, '40px', '1.2rem')}
         <div class="added-ex-info">
           <div class="added-ex-name">${ex.name}</div>
           <div class="added-ex-params">${ex.sets} series · ${
