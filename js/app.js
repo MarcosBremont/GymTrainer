@@ -336,10 +336,14 @@ class GymApp {
     const hdr = document.getElementById('header-avatar');
     hdr.innerHTML  = this._avatarInnerHTML(u);
     hdr.className  = `user-avatar ${u.photoBase64 ? '' : (u.color || 'avatar-purple')}`;
+    hdr.dataset.photoName = u.name;
+    if (u.photoBase64) { hdr.style.cursor = 'pointer'; hdr.onclick = () => app.openPhotoPreview(hdr); } else { hdr.style.cursor = ''; hdr.onclick = null; }
 
     const sba = document.getElementById('sidebar-avatar');
     sba.innerHTML  = this._avatarInnerHTML(u);
     sba.className  = `sidebar-avatar ${u.photoBase64 ? '' : (u.color || 'avatar-purple')}`;
+    sba.dataset.photoName = u.name;
+    if (u.photoBase64) { sba.style.cursor = 'pointer'; sba.onclick = () => app.openPhotoPreview(sba); } else { sba.style.cursor = ''; sba.onclick = null; }
     document.getElementById('sidebar-name').textContent   = u.name;
     document.getElementById('sidebar-role').innerHTML   = isTrainer
       ? `🏋️ Entrenador · ${u.gym || ''}<br><span style="font-size:.65rem;color:var(--text3)">${APP_VERSION}</span>`
@@ -482,13 +486,19 @@ class GymApp {
   closeModal() {
     document.getElementById('modal-overlay').classList.add('hidden');
   }
+  openPhotoPreview(el) {
+    const img = el.querySelector('img');
+    if (!img) return;
+    this.openGifPreview(img.src, el.dataset.photoName || '');
+  }
   openGifPreview(src, name) {
+    const isPhoto = src.startsWith('data:');
     const overlay = document.createElement('div');
     overlay.id = 'gif-preview-overlay';
     overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;cursor:pointer';
     overlay.innerHTML = `
       <div style="color:#fff;font-size:1.1rem;font-weight:600;margin-bottom:12px;text-align:center">${name}</div>
-      <img src="${src}" alt="${name}" style="max-width:90%;max-height:75vh;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.5)"/>
+      <img src="${src}" alt="${name}" style="max-width:90%;max-height:75vh;${isPhoto ? 'border-radius:50%;aspect-ratio:1;object-fit:cover;width:min(75vh,90vw)' : 'border-radius:12px'};box-shadow:0 8px 32px rgba(0,0,0,.5)"/>
       <div style="color:var(--text2);font-size:.85rem;margin-top:14px">Toca para cerrar</div>`;
     overlay.onclick = () => overlay.remove();
     document.body.appendChild(overlay);
@@ -630,7 +640,7 @@ class GymApp {
   clientCardHTML(c, routineCount = 0, lastMeasureWeight = null, targetView = 'client-detail') {
     return `
       <div class="client-card" onclick="app.navigate('${targetView}',{clientId:'${c.id}'})">
-        <div class="client-avatar ${c.color||'avatar-purple'}">${c.avatar||c.name[0]}</div>
+        <div class="client-avatar ${c.photoBase64 ? '' : (c.color||'avatar-purple')}" ${c.photoBase64 ? `data-photo-name="${c.name}" onclick="event.stopPropagation();app.openPhotoPreview(this)" style="cursor:pointer"` : ''}>${this._avatarInnerHTML(c)}</div>
         <div class="client-info">
           <div class="client-name">${c.name}</div>
           <div class="client-meta">🎯 ${c.goal||'Sin objetivo'}</div>
@@ -703,7 +713,7 @@ class GymApp {
         </div>
       </div>
       <div class="profile-hero" style="margin-bottom:20px">
-        <div class="profile-big-avatar ${client.color||'avatar-purple'}">${client.avatar||client.name[0]}</div>
+        <div class="profile-big-avatar ${client.photoBase64 ? '' : (client.color||'avatar-purple')}" ${client.photoBase64 ? `style="cursor:pointer" data-photo-name="${client.name}" onclick="app.openPhotoPreview(this)"` : ''}>${this._avatarInnerHTML(client)}</div>
         <div class="profile-name">${client.name}</div>
         <div class="profile-email">${client.email}</div>
         <div class="profile-badges">
@@ -2434,7 +2444,7 @@ class GymApp {
         <button class="btn btn-outline btn-sm" onclick="app.openEditProfileModal()">✏️ Editar</button>
       </div>
       <div class="profile-hero">
-        <div class="profile-big-avatar ${u.photoBase64 ? '' : (u.color||'avatar-purple')}">${this._avatarInnerHTML(u)}</div>
+        <div class="profile-big-avatar ${u.photoBase64 ? '' : (u.color||'avatar-purple')}" ${u.photoBase64 ? `style="cursor:pointer" data-photo-name="${u.name}" onclick="app.openPhotoPreview(this)"` : ''}>${this._avatarInnerHTML(u)}</div>
         <div class="profile-name">${u.name}</div>
         <div class="profile-email">${u.email}</div>
         <div class="profile-badges">
