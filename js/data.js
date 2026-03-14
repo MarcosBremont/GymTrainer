@@ -1,5 +1,5 @@
 /* ===================================================
-   GymTrainer Pro - Data Layer (Firestore)
+   Gym Trainer - Data Layer (Firestore)
    =================================================== */
 
 import { db, secondaryAuth }  from './firebase.js';

@@ -1,7 +1,7 @@
 {
-  "name": "GymTrainer Pro",
-  "short_name": "GymPro",
-  "description": "Gestión profesional de clientes, rutinas y nutrición para entrenadores personales",
+  "name": "Gym Trainer",
+  "short_name": "Gym Trainer",
+  "description": "App de gestión para entrenadores y sus clientes. Creada por Marcos José Simé Bremont.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0D0D1A",

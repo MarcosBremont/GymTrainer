@@ -1,5 +1,5 @@
 /* ===================================================
-   GymTrainer Pro - Main Application (Firebase version)
+   Gym Trainer - Main Application (Firebase version)
    =================================================== */
 
 import { auth, secondaryAuth } from './firebase.js';
@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.0';
+const APP_VERSION = 'v1.3.1';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -108,7 +108,7 @@ class GymApp {
       el.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0D0D1A;z-index:9999;gap:16px';
       el.innerHTML = `<span style="font-size:3rem;filter:drop-shadow(0 0 20px rgba(108,99,255,.6))">💪</span>
                       <div class="spinner" style="margin:0"></div>
-                      <p style="color:#A0A0C0;font-size:.9rem">Cargando GymTrainer Pro…</p>`;
+                      <p style="color:#A0A0C0;font-size:.9rem">Cargando Gym Trainer…</p>`;
       document.body.appendChild(el);
     }
   }
@@ -2472,7 +2472,7 @@ class GymApp {
           <div class="settings-item" onclick="app.navigate('medidas')"><span class="settings-icon">📏</span><div class="settings-info"><strong>Mis medidas</strong></div><span class="settings-arrow">›</span></div>
           <div class="settings-item" onclick="app.navigate('progreso')"><span class="settings-icon">📈</span><div class="settings-info"><strong>Mi progreso</strong></div><span class="settings-arrow">›</span></div>
         ` : ''}
-        <div class="settings-item" onclick="app.openAboutModal()"><span class="settings-icon">ℹ️</span><div class="settings-info"><strong>Acerca de GymTrainer Pro</strong><small>${APP_VERSION} · Firebase edition</small></div><span class="settings-arrow">›</span></div>
+        <div class="settings-item" onclick="app.openAboutModal()"><span class="settings-icon">ℹ️</span><div class="settings-info"><strong>Acerca de Gym Trainer</strong><small>${APP_VERSION}</small></div><span class="settings-arrow">›</span></div>
         <div class="settings-item" style="color:var(--accent)" onclick="app.logout()"><span class="settings-icon">🚪</span><div class="settings-info"><strong style="color:var(--accent)">Cerrar sesión</strong></div></div>
       </div>`;
   }
@@ -2690,14 +2690,14 @@ class GymApp {
   }
 
   openAboutModal() {
-    this.openModal('Acerca de GymTrainer Pro', `
+    this.openModal('Acerca de Gym Trainer', `
       <div style="text-align:center;padding:20px 0">
         <div style="font-size:4rem;margin-bottom:12px">💪</div>
-        <h2 style="font-size:1.4rem;font-weight:800">GymTrainer Pro</h2>
-        <p style="color:var(--text2);margin-top:6px">${APP_VERSION} · Firebase Edition</p>
-        <p style="color:var(--text2);font-size:.88rem;margin-top:16px;line-height:1.6">PWA para entrenadores personales con Firebase Auth + Firestore.<br>Datos en tiempo real, disponible offline tras la primera carga.</p>
+        <h2 style="font-size:1.4rem;font-weight:800">Gym Trainer</h2>
+        <p style="color:var(--text2);margin-top:6px">${APP_VERSION}</p>
+        <p style="color:var(--text2);font-size:.88rem;margin-top:16px;line-height:1.6">Gestiona tus clientes, rutinas, nutrición y progreso desde un solo lugar. Disponible en cualquier dispositivo.</p>
         <div style="margin-top:20px;padding:14px;background:var(--bg2);border-radius:var(--radius-sm)">
-          <p style="font-size:.82rem;color:var(--text2)">📱 Instala la app para acceso sin conexión</p>
+          <p style="font-size:.85rem;color:var(--text)">Creado por <strong>Marcos José Simé Bremont</strong></p>
         </div>
       </div>`);
   }

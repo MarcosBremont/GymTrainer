@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gymtrainer-v1.3.0';
+const CACHE_NAME = 'gymtrainer-v1.3.1';
 const ASSETS = [
   './',
   './index.html',
@@ -61,7 +61,7 @@ self.addEventListener('sync', (e) => {
 
 // Push notifications
 self.addEventListener('push', (e) => {
-  const data = e.data ? e.data.json() : { title: 'GymTrainer Pro', body: 'Tienes actividad nueva' };
+  const data = e.data ? e.data.json() : { title: 'Gym Trainer', body: 'Tienes actividad nueva' };
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,

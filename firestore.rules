@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // =====================================================
-// GymTrainer Pro – Firestore Security Rules
+// Gym Trainer – Firestore Security Rules
 // Pega estas reglas en:
 //   Firebase Console → Firestore Database → Rules
 // =====================================================

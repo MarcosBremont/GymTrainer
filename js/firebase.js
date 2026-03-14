@@ -1,5 +1,5 @@
 /* ===================================================
-   GymTrainer Pro - Firebase Initialization
+   Gym Trainer - Firebase Initialization
    =================================================== */
 
 import { initializeApp }       from 'https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js';
