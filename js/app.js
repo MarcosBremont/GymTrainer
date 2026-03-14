@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.3';
+const APP_VERSION = 'v1.3.4';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -284,13 +284,16 @@ class GymApp {
       // onAuthStateChanged handles the rest
     } catch (e) {
       const msgs = {
-        'auth/invalid-credential':      'Correo o contraseña incorrectos.',
-        'auth/wrong-password':          'Correo o contraseña incorrectos.',
+        'auth/invalid-credential':      'Correo o contraseña incorrectos. Verifica tus datos o contacta a tu entrenador.',
+        'auth/wrong-password':          'Contraseña incorrecta.',
         'auth/user-not-found':          'No existe una cuenta con ese correo.',
+        'auth/invalid-email':           'El formato del correo no es válido.',
+        'auth/user-disabled':           'Esta cuenta ha sido deshabilitada.',
         'auth/too-many-requests':       'Demasiados intentos. Espera un momento.',
         'auth/network-request-failed':  'Sin conexión. Comprueba tu red.',
       };
       errEl.textContent = msgs[e.code] || `Error: ${e.message}`;
+      console.warn('Login error:', e.code, e.message);
       errEl.classList.remove('hidden');
     } finally {
       btn.disabled = false;
