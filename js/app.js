@@ -59,7 +59,8 @@ function exerciseThumbHTML(ex, size = '48px', fontSize = '1.5rem') {
   const m = getMuscleInfo(ex.muscleGroup);
   const gif = getExerciseGif(ex.exerciseId);
   if (gif) {
-    return `<div class="exercise-thumb" style="width:${size};height:${size};border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0"><img src="${gif}" alt="${ex.name}" style="width:100%;height:100%;object-fit:cover"/></div>`;
+    const safeN = (ex.name||'').replace(/'/g, "\\'");
+    return `<div class="exercise-thumb" style="width:${size};height:${size};border-radius:var(--radius-sm);overflow:hidden;flex-shrink:0;cursor:pointer" onclick="event.stopPropagation();app.openGifPreview('${gif}','${safeN}')"><img src="${gif}" alt="${ex.name}" style="width:100%;height:100%;object-fit:cover"/></div>`;
   }
   return `<div class="exercise-thumb" style="background:${m.color};width:${size};height:${size};font-size:${fontSize}">${m.icon}</div>`;
 }
@@ -468,6 +469,17 @@ class GymApp {
   }
   closeModal() {
     document.getElementById('modal-overlay').classList.add('hidden');
+  }
+  openGifPreview(src, name) {
+    const overlay = document.createElement('div');
+    overlay.id = 'gif-preview-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;cursor:pointer';
+    overlay.innerHTML = `
+      <div style="color:#fff;font-size:1.1rem;font-weight:600;margin-bottom:12px;text-align:center">${name}</div>
+      <img src="${src}" alt="${name}" style="max-width:90%;max-height:75vh;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.5)"/>
+      <div style="color:var(--text2);font-size:.85rem;margin-top:14px">Toca para cerrar</div>`;
+    overlay.onclick = () => overlay.remove();
+    document.body.appendChild(overlay);
   }
   showNotifications() {
     this.openModal('Notificaciones', '<div class="empty-state"><div class="empty-icon">🔔</div><h3>Sin notificaciones</h3></div>');
