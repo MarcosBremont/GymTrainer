@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.4';
+const APP_VERSION = 'v1.3.5';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -259,15 +259,26 @@ class GymApp {
       if (this._registering) return; // el flujo de registro lo maneja register()
       this.hideInitLoader();
       if (firebaseUser) {
-        const userData = await DB.getUser(firebaseUser.uid);
-        if (userData) {
-          this.startApp(userData);
-        } else {
-          // Auth account exists but no Firestore doc → sign out
-          await signOut(auth);
+        console.log('[Auth] Usuario autenticado:', firebaseUser.uid, firebaseUser.email);
+        try {
+          const userData = await DB.getUser(firebaseUser.uid);
+          console.log('[Auth] Datos Firestore:', userData ? 'encontrado' : 'NO encontrado');
+          if (userData) {
+            this.startApp(userData);
+          } else {
+            console.warn('[Auth] No hay documento en Firestore para este usuario. Cerrando sesión.');
+            await signOut(auth);
+            this.showAuthScreen();
+            this.toast('Tu cuenta no tiene perfil configurado. Contacta a tu entrenador.', 'error');
+          }
+        } catch (err) {
+          console.error('[Auth] Error al obtener datos del usuario:', err);
+          this.hideInitLoader();
           this.showAuthScreen();
+          this.toast('Error al cargar tu perfil. Intenta de nuevo.', 'error');
         }
       } else {
+        console.log('[Auth] No hay sesión activa');
         this.showAuthScreen();
       }
     });
@@ -280,7 +291,9 @@ class GymApp {
     btn.textContent = 'Entrando…';
     errEl.classList.add('hidden');
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      console.log('[Login] Intentando con:', email);
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      console.log('[Login] Éxito:', result.user.uid);
       // onAuthStateChanged handles the rest
     } catch (e) {
       const msgs = {
