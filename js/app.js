@@ -17,6 +17,9 @@ import {
   DB, uid, EXERCISE_LIBRARY, MEAL_SLOTS, DAYS_OF_WEEK,
 } from './data.js';
 
+// ── App Version ─────────────────────────────────────
+const APP_VERSION = 'v1.1.0';
+
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
 const randomColor   = () => AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
@@ -1138,6 +1141,21 @@ class GymApp {
           <label>Descripción / Instrucciones</label>
           <textarea name="description" placeholder="Notas técnicas, equipamiento necesario…">${editing?.description||''}</textarea>
         </div>
+        <div class="form-group">
+          <label>Foto / GIF del ejercicio</label>
+          <div id="custom-ex-photo-current" style="text-align:center;margin-bottom:8px">
+            ${editing?.photoBase64 ? `<img src="${editing.photoBase64}" alt="Ejercicio" style="max-width:100%;max-height:200px;border-radius:8px">` : '<div style="padding:20px;background:var(--bg2);border-radius:var(--radius-sm);color:var(--text3);font-size:.85rem">Sin imagen</div>'}
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:8px">
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('custom-ex-photo-file').click()" style="color:#fff">📁 Galería</button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="app._takeCustomExPhoto()" style="color:#fff">📷 Cámara</button>
+            ${editing?.photoBase64 ? `<button type="button" class="btn btn-danger btn-sm" onclick="app._clearCustomExPhoto()">🗑 Quitar</button>` : ''}
+          </div>
+          <input type="file" id="custom-ex-photo-file" accept="image/*,image/gif" style="display:none" onchange="app._previewCustomExPhoto(this)">
+          <div id="custom-ex-photo-preview" style="display:none;text-align:center;margin-top:8px">
+            <img id="custom-ex-preview-img" style="max-width:100%;max-height:200px;border-radius:8px">
+          </div>
+        </div>
         <p id="custom-ex-err" class="form-error hidden"></p>
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" onclick="app.openExercisePickerModal()">← Volver</button>
@@ -1146,6 +1164,7 @@ class GymApp {
       </form>`;
 
     this.openModal(editing ? 'Editar Ejercicio' : 'Nuevo Ejercicio Personalizado', html, true);
+    this._pendingCustomExPhoto = null;
 
     document.getElementById('custom-ex-form').onsubmit = async e => {
       e.preventDefault();
@@ -1155,6 +1174,20 @@ class GymApp {
       errEl.classList.add('hidden');
       try {
         const fd = new FormData(e.target);
+        let photoBase64 = editing?.photoBase64 || null;
+        if (this._pendingCustomExPhoto === '__remove__') {
+          photoBase64 = null;
+        } else if (this._pendingCustomExPhoto) {
+          // Compress if not a GIF
+          const file = document.getElementById('custom-ex-photo-file').files[0];
+          if (file && file.type === 'image/gif') {
+            photoBase64 = this._pendingCustomExPhoto;
+          } else if (file) {
+            photoBase64 = await this.fileToDataURL(file, 600, 0.7);
+          } else {
+            photoBase64 = this._pendingCustomExPhoto;
+          }
+        }
         await DB.saveCustomExercise({
           id:          editing?.id || null,
           trainerId:   this.user.id,
@@ -1165,6 +1198,7 @@ class GymApp {
           reps:        fd.get('reps') || '10-12',
           rest:        parseInt(fd.get('rest')) || 60,
           description: fd.get('description').trim(),
+          photoBase64,
         });
         this.toast(editing ? '✅ Ejercicio actualizado' : '✅ Ejercicio creado');
         await this.openExercisePickerModal();
@@ -1196,6 +1230,34 @@ class GymApp {
     this.toast('Ejercicio eliminado', 'info');
     await this.openExercisePickerModal();
     this._switchMuscleGroup('__custom__');
+  }
+
+  _previewCustomExPhoto(input) {
+    const file = input.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        document.getElementById('custom-ex-preview-img').src = e.target.result;
+        document.getElementById('custom-ex-photo-preview').style.display = 'block';
+        this._pendingCustomExPhoto = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  _takeCustomExPhoto() {
+    const input = document.getElementById('custom-ex-photo-file');
+    if (!input) return;
+    input.setAttribute('capture', 'environment');
+    input.click();
+    input.addEventListener('change', () => input.removeAttribute('capture'), { once: true });
+  }
+
+  _clearCustomExPhoto() {
+    this._pendingCustomExPhoto = '__remove__';
+    const current = document.getElementById('custom-ex-photo-current');
+    if (current) current.innerHTML = '<div style="padding:20px;background:var(--bg2);border-radius:var(--radius-sm);color:var(--text3);font-size:.85rem">Sin imagen</div>';
+    document.getElementById('custom-ex-photo-preview').style.display = 'none';
   }
 
   async openExerciseConfigModal(muscleGroup, exerciseId, customExObj = null) {
@@ -1752,15 +1814,25 @@ class GymApp {
             }).join('')}
           </div>
           ${latest.notes ? `<div style="margin-top:12px;padding:10px;background:var(--bg2);border-radius:var(--radius-sm);color:var(--text2);font-size:.85rem">📝 ${latest.notes}</div>` : ''}
+          ${(latest.photo1 || latest.photo2) ? `
+            <div style="margin-top:14px">
+              <div class="section-title" style="margin-bottom:8px;font-size:.9rem">📸 Fotos de progreso</div>
+              <div style="display:grid;grid-template-columns:${latest.photo1 && latest.photo2 ? '1fr 1fr' : '1fr'};gap:10px">
+                ${latest.photo1 ? `<img src="${latest.photo1}" style="width:100%;border-radius:8px;cursor:pointer;aspect-ratio:3/4;object-fit:cover" onclick="app.viewPhoto(this.src)" alt="Foto 1">` : ''}
+                ${latest.photo2 ? `<img src="${latest.photo2}" style="width:100%;border-radius:8px;cursor:pointer;aspect-ratio:3/4;object-fit:cover" onclick="app.viewPhoto(this.src)" alt="Foto 2">` : ''}
+              </div>
+            </div>
+          ` : ''}
         </div>
         <div class="section-header"><span class="section-title">Historial de mediciones</span></div>
         <div class="measure-history">
           <div class="history-row header"><span>Fecha</span><span>Peso</span><span>% Grasa</span><span>IMC</span></div>
           ${measures.map(m => `<div class="history-row">
-            <span>${formatDate(m.date)}</span>
+            <span>${formatDate(m.date)}${(m.photo1||m.photo2)?'📸':''}</span>
             <span>${m.weight?m.weight+'kg':'-'}</span>
             <span>${m.bodyFat?m.bodyFat+'%':'-'}</span>
             <span>${calcIMC(m.weight,m.height)}</span>
+            ${(m.photo1||m.photo2) ? `<button class="btn btn-outline btn-sm" onclick="app._showMeasurePhotosById('${m.id}','${cid}')">📷</button>` : ''}
             ${this.user.role === 'trainer' ? `<button class="btn btn-danger btn-sm" onclick="app.confirmDeleteMeasurement('${m.id}','${cid}')">🗑</button>` : ''}
           </div>`).join('')}
         </div>
@@ -1808,11 +1880,38 @@ class GymApp {
           <div class="form-group"><label>Pantorrilla izquierda (cm)</label><input type="number" name="leftCalf" step=".5"/></div>
         </div>
         <div class="form-group" style="margin-top:8px"><label>Notas</label><textarea name="notes" placeholder="Observaciones…"></textarea></div>
+        <div class="form-section-title">📸 Fotos de progreso</div>
+        <p style="color:var(--text3);font-size:.8rem;margin-bottom:10px">Sube hasta 2 fotos para comparar tu progreso visual</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="text-align:center">
+            <label style="font-size:.85rem;color:var(--text2);margin-bottom:6px;display:block">Foto 1</label>
+            <div id="measure-photo1-preview" style="width:100%;aspect-ratio:3/4;background:var(--bg2);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;border:2px dashed var(--border)" onclick="document.getElementById('measure-photo1-file').click()">
+              <span style="color:var(--text3);font-size:.8rem">📷 Toca para subir</span>
+            </div>
+            <input type="file" id="measure-photo1-file" accept="image/*" style="display:none" onchange="app._previewMeasurePhoto(this, 1)">
+            <div style="display:flex;gap:4px;margin-top:6px;justify-content:center">
+              <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('measure-photo1-file').click()" style="font-size:.75rem;color:#fff">📁</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="app._takeMeasurePhoto(1)" style="font-size:.75rem;color:#fff">📷</button>
+            </div>
+          </div>
+          <div style="text-align:center">
+            <label style="font-size:.85rem;color:var(--text2);margin-bottom:6px;display:block">Foto 2</label>
+            <div id="measure-photo2-preview" style="width:100%;aspect-ratio:3/4;background:var(--bg2);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;border:2px dashed var(--border)" onclick="document.getElementById('measure-photo2-file').click()">
+              <span style="color:var(--text3);font-size:.8rem">📷 Toca para subir</span>
+            </div>
+            <input type="file" id="measure-photo2-file" accept="image/*" style="display:none" onchange="app._previewMeasurePhoto(this, 2)">
+            <div style="display:flex;gap:4px;margin-top:6px;justify-content:center">
+              <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('measure-photo2-file').click()" style="font-size:.75rem;color:#fff">📁</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="app._takeMeasurePhoto(2)" style="font-size:.75rem;color:#fff">📷</button>
+            </div>
+          </div>
+        </div>
         <div class="form-actions">
           <button type="button" class="btn btn-ghost" onclick="app.closeModal()">Cancelar</button>
           <button type="submit" class="btn btn-primary">💾 Guardar medidas</button>
         </div>
       </form>`, true);
+    this._measurePhotos = { photo1: null, photo2: null };
 
     document.getElementById('measure-form').onsubmit = async e => {
       e.preventDefault();
@@ -1821,6 +1920,13 @@ class GymApp {
       const fd = new FormData(e.target);
       const pF = v => v ? parseFloat(v) : null;
       try {
+        // Process measure photos
+        let photo1 = null, photo2 = null;
+        const file1 = document.getElementById('measure-photo1-file')?.files[0];
+        const file2 = document.getElementById('measure-photo2-file')?.files[0];
+        if (file1) photo1 = await this.fileToDataURL(file1, 600, 0.7);
+        if (file2) photo2 = await this.fileToDataURL(file2, 600, 0.7);
+
         await DB.saveMeasurement({
           id: null, clientId: cid, date: fd.get('date'),
           weight: pF(fd.get('weight')), height: pF(fd.get('height')), bodyFat: pF(fd.get('bodyFat')),
@@ -1829,6 +1935,7 @@ class GymApp {
           rightThigh: pF(fd.get('rightThigh')), leftThigh: pF(fd.get('leftThigh')),
           rightCalf:  pF(fd.get('rightCalf')),  leftCalf:  pF(fd.get('leftCalf')),
           notes: fd.get('notes'),
+          photo1, photo2,
         });
         this.toast('Medidas guardadas correctamente');
         this.closeModal();
@@ -1853,6 +1960,38 @@ class GymApp {
     this.closeModal();
     this.toast('Medición eliminada', 'info');
     this.navigate('medidas', { clientId });
+  }
+
+  _previewMeasurePhoto(input, num) {
+    const file = input.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        const container = document.getElementById(`measure-photo${num}-preview`);
+        if (container) {
+          container.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:var(--radius-sm)">`;
+          container.style.border = 'none';
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  _takeMeasurePhoto(num) {
+    const input = document.getElementById(`measure-photo${num}-file`);
+    if (!input) return;
+    input.setAttribute('capture', 'environment');
+    input.click();
+    input.addEventListener('change', () => input.removeAttribute('capture'), { once: true });
+  }
+
+  async _showMeasurePhotosById(measureId, clientId) {
+    const measures = await DB.getMeasurementsByClient(clientId);
+    const m = measures.find(x => x.id === measureId);
+    if (!m || (!m.photo1 && !m.photo2)) return this.toast('Sin fotos', 'info');
+    const photosHtml = [m.photo1, m.photo2].filter(Boolean)
+      .map(src => `<img src="${src}" style="max-width:100%;border-radius:8px;margin-bottom:12px;cursor:pointer" onclick="app.viewPhoto(this.src)">`).join('');
+    this.openModal(`📸 Fotos · ${formatDate(m.date)}`, `<div style="text-align:center">${photosHtml}</div>`, true);
   }
 
   openPhotoModal(clientId) {
@@ -2237,7 +2376,7 @@ class GymApp {
           <div class="settings-item" onclick="app.navigate('medidas')"><span class="settings-icon">📏</span><div class="settings-info"><strong>Mis medidas</strong></div><span class="settings-arrow">›</span></div>
           <div class="settings-item" onclick="app.navigate('progreso')"><span class="settings-icon">📈</span><div class="settings-info"><strong>Mi progreso</strong></div><span class="settings-arrow">›</span></div>
         ` : ''}
-        <div class="settings-item" onclick="app.openAboutModal()"><span class="settings-icon">ℹ️</span><div class="settings-info"><strong>Acerca de GymTrainer Pro</strong><small>v1.0 · Firebase edition</small></div><span class="settings-arrow">›</span></div>
+        <div class="settings-item" onclick="app.openAboutModal()"><span class="settings-icon">ℹ️</span><div class="settings-info"><strong>Acerca de GymTrainer Pro</strong><small>${APP_VERSION} · Firebase edition</small></div><span class="settings-arrow">›</span></div>
         <div class="settings-item" style="color:var(--accent)" onclick="app.logout()"><span class="settings-icon">🚪</span><div class="settings-info"><strong style="color:var(--accent)">Cerrar sesión</strong></div></div>
       </div>`;
   }
@@ -2459,7 +2598,7 @@ class GymApp {
       <div style="text-align:center;padding:20px 0">
         <div style="font-size:4rem;margin-bottom:12px">💪</div>
         <h2 style="font-size:1.4rem;font-weight:800">GymTrainer Pro</h2>
-        <p style="color:var(--text2);margin-top:6px">v1.0 · Firebase Edition</p>
+        <p style="color:var(--text2);margin-top:6px">${APP_VERSION} · Firebase Edition</p>
         <p style="color:var(--text2);font-size:.88rem;margin-top:16px;line-height:1.6">PWA para entrenadores personales con Firebase Auth + Firestore.<br>Datos en tiempo real, disponible offline tras la primera carga.</p>
         <div style="margin-top:20px;padding:14px;background:var(--bg2);border-radius:var(--radius-sm)">
           <p style="font-size:.82rem;color:var(--text2)">📱 Instala la app para acceso sin conexión</p>
