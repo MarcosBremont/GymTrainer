@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.2.0';
+const APP_VERSION = 'v1.2.1';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -512,6 +512,7 @@ class GymApp {
         <div class="welcome-title">${greeting}, ${this.user.name.split(' ')[0]} 👋</div>
         <div class="welcome-subtitle">${new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</div>
         <div class="welcome-cta"><button class="btn btn-primary btn-sm" onclick="app.navigate('clientes')">Ver mis clientes</button></div>
+        <div style="margin-top:8px;font-size:.7rem;color:var(--text3)">${APP_VERSION}</div>
       </div>
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-icon" style="background:rgba(108,99,255,0.15)">👥</div><div class="stat-info"><strong>${clients.length}</strong><span>Clientes</span></div></div>
@@ -548,6 +549,7 @@ class GymApp {
         <div class="welcome-title">¡Hola, ${this.user.name.split(' ')[0]}! 💪</div>
         <div class="welcome-subtitle">${new Date().toLocaleDateString('es-ES',{weekday:'long',day:'numeric',month:'long'})}</div>
         ${trainer ? `<div class="welcome-subtitle" style="margin-top:6px">👨‍💼 Entrenador: ${trainer.name}</div>` : ''}
+        <div style="margin-top:8px;font-size:.7rem;color:var(--text3)">${APP_VERSION}</div>
       </div>
       <div class="stats-grid">
         <div class="stat-card"><div class="stat-icon" style="background:rgba(108,99,255,0.15)">📋</div><div class="stat-info"><strong>${routines.length}</strong><span>Rutinas asig.</span></div></div>
