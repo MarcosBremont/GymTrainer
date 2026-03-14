@@ -1244,7 +1244,7 @@ class GymApp {
         <div class="form-group">
           <label style="color:#fff;font-weight:600">Foto / GIF</label>
           <div style="display:flex;flex-direction:column;gap:10px">
-            <div id="exercise-photo-current" style="width:100%;max-width:300px;border-radius:8px;margin-top:10px">
+            <div id="exercise-photo-current" style="width:100%;max-width:300px;border-radius:8px;margin:10px auto 0 auto;display:block">
               ${exercisePhotoSrc ? `<img src="${exercisePhotoSrc}" alt="${ex.name}" style="width:100%;border-radius:8px">` : `<div style="padding:18px;border:1px dashed rgba(255,255,255,0.5);border-radius:8px;color:rgba(255,255,255,0.75);display:flex;align-items:center;justify-content:center;min-height:140px">No hay imagen disponible</div>`}
             </div>
             <div id="exercise-photo-buttons" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center${exercisePhotoSrc ? ';display:none' : ''}">
