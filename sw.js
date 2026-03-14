@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gymtrainer-v1.3.2';
+const CACHE_NAME = 'gymtrainer-v1.3.3';
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +6,7 @@ const ASSETS = [
   './js/data.js',
   './js/app.js',
   './manifest.json',
-  './icons/icon.svg',
+  './assets/LogoGymTrainerSinFondo.png',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'
 ];
 
@@ -30,25 +30,20 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Fetch: cache-first for assets, network-first for rest
+// Fetch: network-first (try network, fall back to cache for offline)
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
 
-  // Cache-first strategy
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request)
-        .then(response => {
-          if (!response || response.status !== 200 || response.type === 'opaque') {
-            return response;
-          }
+    fetch(e.request)
+      .then(response => {
+        if (response && response.status === 200 && response.type !== 'opaque') {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
-          return response;
-        })
-        .catch(() => caches.match('./index.html'));
-    })
+        }
+        return response;
+      })
+      .catch(() => caches.match(e.request).then(cached => cached || caches.match('./index.html')))
   );
 });
 
@@ -65,8 +60,8 @@ self.addEventListener('push', (e) => {
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: './icons/icon.svg',
-      badge: './icons/icon.svg',
+      icon: './assets/LogoGymTrainerSinFondo.png',
+      badge: './assets/LogoGymTrainerSinFondo.png',
       tag: 'gym-notification'
     })
   );
