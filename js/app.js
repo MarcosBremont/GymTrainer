@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.16';
+const APP_VERSION = 'v1.3.17';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -106,7 +106,7 @@ class GymApp {
       const el = document.createElement('div');
       el.id = 'init-loader';
       el.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0D0D1A;z-index:9999;gap:16px';
-      el.innerHTML = `<img src="assets/LogoGymTrainerSinFondo.png" alt="Gym Trainer" style="width:120px;filter:invert(1) drop-shadow(0 0 20px rgba(108,99,255,.6))"/>
+      el.innerHTML = `<img src="assets/LogoGymTrainerSVG.svg" alt="Gym Trainer" style="width:120px;filter:drop-shadow(0 0 20px rgba(108,99,255,.6))"/>
                       <div class="spinner" style="margin:0"></div>`;
       document.body.appendChild(el);
     }

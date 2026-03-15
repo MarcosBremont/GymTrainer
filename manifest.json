@@ -11,16 +11,10 @@
   "categories": ["health", "fitness", "sports"],
   "icons": [
     {
-      "src": "assets/LogoGymTrainer.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "assets/LogoGymTrainerSinFondo.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "src": "assets/LogoGymTrainerSVG.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
     }
   ],
   "screenshots": [],

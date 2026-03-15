@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gymtrainer-v1.3.16';
+const CACHE_NAME = 'gymtrainer-v1.3.17';
 const ASSETS = [
   './',
   './index.html',
@@ -6,7 +6,7 @@ const ASSETS = [
   './js/data.js',
   './js/app.js',
   './manifest.json',
-  './assets/LogoGymTrainerSinFondo.png',
+  './assets/LogoGymTrainerSVG.svg',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js'
 ];
 
@@ -60,8 +60,8 @@ self.addEventListener('push', (e) => {
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      icon: './assets/LogoGymTrainerSinFondo.png',
-      badge: './assets/LogoGymTrainerSinFondo.png',
+      icon: './assets/LogoGymTrainerSVG.svg',
+      badge: './assets/LogoGymTrainerSVG.svg',
       tag: 'gym-notification'
     })
   );
