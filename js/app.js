@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.17';
+const APP_VERSION = 'v1.3.18';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -2543,6 +2543,7 @@ class GymApp {
           <div class="settings-item" onclick="app.navigate('medidas')"><span class="settings-icon">📏</span><div class="settings-info"><strong>Mis medidas</strong></div><span class="settings-arrow">›</span></div>
           <div class="settings-item" onclick="app.navigate('progreso')"><span class="settings-icon">📈</span><div class="settings-info"><strong>Mi progreso</strong></div><span class="settings-arrow">›</span></div>
         ` : ''}
+        <div class="settings-item" onclick="app.shareApp()"><span class="settings-icon">🔗</span><div class="settings-info"><strong>Compartir app</strong><small>Envía el link a tus amigos</small></div><span class="settings-arrow">›</span></div>
         <div class="settings-item" onclick="app.openAboutModal()"><span class="settings-icon">ℹ️</span><div class="settings-info"><strong>Acerca de Gym Trainer</strong><small>${APP_VERSION}</small></div><span class="settings-arrow">›</span></div>
         <div class="settings-item" style="color:var(--accent)" onclick="app.logout()"><span class="settings-icon">🚪</span><div class="settings-info"><strong style="color:var(--accent)">Cerrar sesión</strong></div></div>
       </div>`;
@@ -2770,6 +2771,28 @@ class GymApp {
           <p style="font-size:.85rem;color:var(--text)">Creado por <strong>Marcos José Simé Bremont</strong></p>
         </div>
       </div>`);
+  }
+
+  async shareApp() {
+    const shareData = {
+      title: 'Gym Trainer',
+      text: 'Gestiona tus entrenamientos, rutinas y nutrición desde cualquier dispositivo.',
+      url: 'https://marcosbremont.github.io/GymTrainer/'
+    };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch (_) { /* user cancelled */ }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareData.url);
+        this.toast('Link copiado al portapapeles', 'success');
+      } catch (_) {
+        this.openModal('Compartir Gym Trainer', `
+          <div style="text-align:center;padding:20px 0">
+            <p style="margin-bottom:12px;color:var(--text2)">Copia este link:</p>
+            <input type="text" value="${shareData.url}" readonly style="width:100%;padding:10px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--bg2);color:var(--text);text-align:center" onclick="this.select()"/>
+          </div>`);
+      }
+    }
   }
 }
 
