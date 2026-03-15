@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.9';
+const APP_VERSION = 'v1.3.10';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -364,8 +364,24 @@ class GymApp {
   showAuthScreen() {
     document.getElementById('auth-screen').classList.remove('hidden');
     document.getElementById('app-shell').classList.add('hidden');
+    // Limpiar todos los campos del login y registro
     document.getElementById('login-email').value    = '';
     document.getElementById('login-password').value = '';
+    const regName = document.getElementById('reg-name');
+    const regEmail = document.getElementById('reg-email');
+    const regPass = document.getElementById('reg-password');
+    const regRole = document.getElementById('reg-role');
+    if (regName) regName.value = '';
+    if (regEmail) regEmail.value = '';
+    if (regPass) regPass.value = '';
+    if (regRole) regRole.value = '';
+    // Ocultar errores
+    document.getElementById('login-error')?.classList.add('hidden');
+    document.getElementById('reg-error')?.classList.add('hidden');
+    // Volver a la pestaña de login
+    document.querySelectorAll('.auth-tab, .tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelector('.auth-tab[data-tab="login"]')?.classList.add('active');
+    document.getElementById('tab-login')?.classList.add('active');
   }
 
   // ── Shell ──────────────────────────────────────────
