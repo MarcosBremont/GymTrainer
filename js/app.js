@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.18';
+const APP_VERSION = 'v1.3.19';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -721,6 +721,7 @@ class GymApp {
         ${targetView === 'client-detail' ? `
         <div class="client-actions" onclick="event.stopPropagation()">
           <button class="btn btn-outline btn-sm" onclick="app.openEditClientModal('${c.id}')">✏️</button>
+          <button class="btn btn-outline btn-sm" style="border-color:#ff4d4d;color:#ff4d4d" onclick="app.confirmDeleteClient('${c.id}','${(c.name||'').replace(/'/g,"\\'")}')">🗑️</button>
         </div>` : ''}
       </div>`;
   }
@@ -758,6 +759,40 @@ class GymApp {
     document.getElementById('clients-list').innerHTML = filtered.length
       ? filtered.map(c => this.clientCardHTML(c)).join('')
       : '<div class="empty-state"><div class="empty-icon">🔍</div><h3>Sin resultados</h3></div>';
+  }
+
+  confirmDeleteClient(clientId, clientName) {
+    this.openModal('Eliminar cliente', `
+      <div style="text-align:center;padding:16px 0">
+        <p style="font-size:1.1rem;margin-bottom:8px">¿Eliminar a <strong>${clientName}</strong>?</p>
+        <p style="color:var(--text2);font-size:.88rem;margin-bottom:20px">Se eliminará su perfil y todos sus datos (rutinas, nutrición, medidas). Esta acción no se puede deshacer.</p>
+        <div style="display:flex;gap:10px;justify-content:center">
+          <button class="btn btn-outline" onclick="app.closeModal()">Cancelar</button>
+          <button class="btn btn-primary" style="background:#ff4d4d;border-color:#ff4d4d" onclick="app.deleteClient('${clientId}')">Eliminar</button>
+        </div>
+      </div>`);
+  }
+
+  async deleteClient(clientId) {
+    try {
+      const [routines, meals, measures] = await Promise.all([
+        DB.getRoutinesByClient(clientId),
+        DB.getMealPlansByClient(clientId),
+        DB.getMeasurementsByClient(clientId),
+      ]);
+      await Promise.all([
+        ...routines.map(r => DB.deleteRoutine(r.id)),
+        ...meals.map(m => DB.deleteMealPlan(m.id)),
+        ...measures.map(m => DB.deleteMeasurement(m.id)),
+        DB.deleteUser(clientId),
+      ]);
+      this.closeModal();
+      this.toast('Cliente eliminado', 'success');
+      this.navigate('clientes');
+    } catch (err) {
+      console.error('[DeleteClient]', err);
+      this.toast('Error al eliminar cliente', 'error');
+    }
   }
 
   // Client Detail
