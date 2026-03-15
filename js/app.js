@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.15';
+const APP_VERSION = 'v1.3.16';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -2763,7 +2763,7 @@ class GymApp {
   openAboutModal() {
     this.openModal('Acerca de Gym Trainer', `
       <div style="text-align:center;padding:20px 0">
-        <img src="assets/LogoGymTrainerSinFondo.png" alt="Gym Trainer" style="width:120px;filter:invert(1);margin-bottom:12px"/>
+        <img src="assets/LogoGymTrainerSVG.svg" alt="Gym Trainer" style="width:120px;margin-bottom:12px"/>
         <p style="color:var(--text2);margin-top:6px">${APP_VERSION}</p>
         <p style="color:var(--text2);font-size:.88rem;margin-top:16px;line-height:1.6">Gestiona tus clientes, rutinas, nutrición y progreso desde un solo lugar. Disponible en cualquier dispositivo.</p>
         <div style="margin-top:20px;padding:14px;background:var(--bg2);border-radius:var(--radius-sm)">
