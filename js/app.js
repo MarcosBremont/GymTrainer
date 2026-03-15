@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.7';
+const APP_VERSION = 'v1.3.8';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -243,10 +243,41 @@ class GymApp {
       this.startApp(userData);
     } catch (e) {
       this._registering = false;
+      if (e.code === 'auth/email-already-in-use') {
+        // La cuenta Auth existe — intentar login y crear perfil Firestore si no existe
+        try {
+          btn.textContent = 'Recuperando cuenta…';
+          const cred = await signInWithEmailAndPassword(auth, email, password);
+          const existing = await DB.getUser(cred.user.uid);
+          if (existing) {
+            this.toast('Ya tienes cuenta. Iniciando sesión…', 'info');
+            this.startApp(existing);
+            return;
+          }
+          // Auth existe pero sin perfil Firestore — crear el perfil
+          const userData = {
+            id: cred.user.uid, role, name, email, phone: '',
+            avatar: role === 'trainer' ? '🏋️' : '💪',
+            color: randomColor(),
+            joinDate: todayStr(), active: true,
+            ...(role === 'trainer'
+              ? { gym: '', specialty: '', experience: '' }
+              : { trainerId, goal: '', level: 'Principiante', age: null }),
+          };
+          await DB.saveUser(userData);
+          this.toast('Perfil creado correctamente.');
+          this.startApp(userData);
+          return;
+        } catch (loginErr) {
+          errEl.textContent = 'Ese email ya tiene cuenta pero la contraseña no coincide. Intenta iniciar sesión.';
+          errEl.classList.remove('hidden');
+          btn.disabled = false; btn.textContent = 'Crear cuenta';
+          return;
+        }
+      }
       const msgs = {
-        'auth/email-already-in-use': 'Ese email ya tiene cuenta. Ve a la pestaña "Entrar" para iniciar sesión.',
-        'auth/weak-password':        'La contraseña debe tener al menos 6 caracteres.',
-        'auth/invalid-email':        'El formato del email no es válido.',
+        'auth/weak-password':  'La contraseña debe tener al menos 6 caracteres.',
+        'auth/invalid-email':  'El formato del email no es válido.',
       };
       errEl.textContent = msgs[e.code] || e.message;
       errEl.classList.remove('hidden');
@@ -266,21 +297,14 @@ class GymApp {
           if (userData) {
             this.startApp(userData);
           } else {
-            // Auth account exists but no Firestore profile — auto-create one
-            console.warn('[Auth] No hay documento en Firestore para UID:', firebaseUser.uid, '— creando perfil automáticamente');
-            const autoData = {
-              id: firebaseUser.uid,
-              role: 'trainer',
-              name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
-              email: firebaseUser.email,
-              phone: '', avatar: '🏋️', color: randomColor(),
-              joinDate: todayStr(), active: true,
-              gym: '', specialty: '', experience: '',
-            };
-            await DB.saveUser(autoData);
-            console.log('[Auth] Perfil creado automáticamente');
-            this.toast('Se creó tu perfil automáticamente. Completa tus datos en Perfil.', 'info');
-            this.startApp(autoData);
+            console.warn('[Auth] No hay documento en Firestore para UID:', firebaseUser.uid);
+            await signOut(auth);
+            this.showAuthScreen();
+            const errEl = document.getElementById('login-error');
+            if (errEl) {
+              errEl.textContent = 'Esta cuenta no tiene perfil en el sistema. Pide a tu entrenador que te registre desde su panel.';
+              errEl.classList.remove('hidden');
+            }
           }
         } catch (err) {
           console.error('[Auth] Error al obtener datos del usuario:', err);
