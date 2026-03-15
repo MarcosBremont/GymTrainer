@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.19';
+const APP_VERSION = 'v1.3.20';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -765,7 +765,7 @@ class GymApp {
     this.openModal('Eliminar cliente', `
       <div style="text-align:center;padding:16px 0">
         <p style="font-size:1.1rem;margin-bottom:8px">¿Eliminar a <strong>${clientName}</strong>?</p>
-        <p style="color:var(--text2);font-size:.88rem;margin-bottom:20px">Se eliminará su perfil y todos sus datos (rutinas, nutrición, medidas). Esta acción no se puede deshacer.</p>
+        <p style="color:var(--text2);font-size:.88rem;margin-bottom:20px">Se eliminarán sus rutinas, planes de nutrición y todo lo relacionado a ese cliente. Esta acción no se puede deshacer.</p>
         <div style="display:flex;gap:10px;justify-content:center">
           <button class="btn btn-outline" onclick="app.closeModal()">Cancelar</button>
           <button class="btn btn-primary" style="background:#ff4d4d;border-color:#ff4d4d" onclick="app.deleteClient('${clientId}')">Eliminar</button>
@@ -976,7 +976,7 @@ class GymApp {
       <div style="text-align:center;padding:20px 0">
         <div style="font-size:3rem;margin-bottom:12px">⚠️</div>
         <p>¿Eliminar a <strong>${client?.name}</strong>?</p>
-        <p style="color:var(--text2);font-size:.85rem;margin-top:8px">Se eliminarán sus rutinas y planes de Firestore.</p>
+        <p style="color:var(--text2);font-size:.85rem;margin-top:8px">Se eliminarán sus rutinas, planes de nutrición y todo lo relacionado a ese cliente.</p>
         <div class="form-actions" style="justify-content:center;margin-top:20px">
           <button class="btn btn-ghost" onclick="app.closeModal()">Cancelar</button>
           <button class="btn btn-danger" onclick="app.deleteClient('${clientId}')">Eliminar</button>
