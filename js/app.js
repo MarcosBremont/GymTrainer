@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.6';
+const APP_VERSION = 'v1.3.7';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -266,14 +266,21 @@ class GymApp {
           if (userData) {
             this.startApp(userData);
           } else {
-            console.warn('[Auth] No hay documento en Firestore para UID:', firebaseUser.uid);
-            await signOut(auth);
-            this.showAuthScreen();
-            const errEl = document.getElementById('login-error');
-            if (errEl) {
-              errEl.textContent = 'Tu cuenta existe pero no tiene perfil. Contacta a tu entrenador para que te registre desde el sistema.';
-              errEl.classList.remove('hidden');
-            }
+            // Auth account exists but no Firestore profile — auto-create one
+            console.warn('[Auth] No hay documento en Firestore para UID:', firebaseUser.uid, '— creando perfil automáticamente');
+            const autoData = {
+              id: firebaseUser.uid,
+              role: 'trainer',
+              name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+              email: firebaseUser.email,
+              phone: '', avatar: '🏋️', color: randomColor(),
+              joinDate: todayStr(), active: true,
+              gym: '', specialty: '', experience: '',
+            };
+            await DB.saveUser(autoData);
+            console.log('[Auth] Perfil creado automáticamente');
+            this.toast('Se creó tu perfil automáticamente. Completa tus datos en Perfil.', 'info');
+            this.startApp(autoData);
           }
         } catch (err) {
           console.error('[Auth] Error al obtener datos del usuario:', err);
