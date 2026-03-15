@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.10';
+const APP_VERSION = 'v1.3.11';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -106,9 +106,8 @@ class GymApp {
       const el = document.createElement('div');
       el.id = 'init-loader';
       el.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0D0D1A;z-index:9999;gap:16px';
-      el.innerHTML = `<img src="assets/LogoGymTrainerSinFondo.png" alt="Gym Trainer" style="width:80px;height:80px;filter:invert(1) drop-shadow(0 0 20px rgba(108,99,255,.6))"/>
-                      <div class="spinner" style="margin:0"></div>
-                      <p style="color:#A0A0C0;font-size:.9rem">Cargando Gym Trainer…</p>`;
+      el.innerHTML = `<img src="assets/LogoGymTrainerSinFondo.png" alt="Gym Trainer" style="width:120px;filter:invert(1) drop-shadow(0 0 20px rgba(108,99,255,.6))"/>
+                      <div class="spinner" style="margin:0"></div>`;
       document.body.appendChild(el);
     }
   }
@@ -2764,8 +2763,7 @@ class GymApp {
   openAboutModal() {
     this.openModal('Acerca de Gym Trainer', `
       <div style="text-align:center;padding:20px 0">
-        <img src="assets/LogoGymTrainerSinFondo.png" alt="Gym Trainer" style="width:80px;height:80px;filter:invert(1);margin-bottom:12px"/>
-        <h2 style="font-size:1.4rem;font-weight:800">Gym Trainer</h2>
+        <img src="assets/LogoGymTrainerSinFondo.png" alt="Gym Trainer" style="width:120px;filter:invert(1);margin-bottom:12px"/>
         <p style="color:var(--text2);margin-top:6px">${APP_VERSION}</p>
         <p style="color:var(--text2);font-size:.88rem;margin-top:16px;line-height:1.6">Gestiona tus clientes, rutinas, nutrición y progreso desde un solo lugar. Disponible en cualquier dispositivo.</p>
         <div style="margin-top:20px;padding:14px;background:var(--bg2);border-radius:var(--radius-sm)">
