@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.8';
+const APP_VERSION = 'v1.3.9';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -242,14 +242,16 @@ class GymApp {
       this.toast('¡Cuenta creada correctamente!');
       this.startApp(userData);
     } catch (e) {
-      this._registering = false;
       if (e.code === 'auth/email-already-in-use') {
         // La cuenta Auth existe — intentar login y crear perfil Firestore si no existe
+        // Mantener _registering = true para bloquear onAuthStateChanged
+        this._registering = true;
         try {
           btn.textContent = 'Recuperando cuenta…';
           const cred = await signInWithEmailAndPassword(auth, email, password);
           const existing = await DB.getUser(cred.user.uid);
           if (existing) {
+            this._registering = false;
             this.toast('Ya tienes cuenta. Iniciando sesión…', 'info');
             this.startApp(existing);
             return;
@@ -265,16 +267,19 @@ class GymApp {
               : { trainerId, goal: '', level: 'Principiante', age: null }),
           };
           await DB.saveUser(userData);
+          this._registering = false;
           this.toast('Perfil creado correctamente.');
           this.startApp(userData);
           return;
         } catch (loginErr) {
+          this._registering = false;
           errEl.textContent = 'Ese email ya tiene cuenta pero la contraseña no coincide. Intenta iniciar sesión.';
           errEl.classList.remove('hidden');
           btn.disabled = false; btn.textContent = 'Crear cuenta';
           return;
         }
       }
+      this._registering = false;
       const msgs = {
         'auth/weak-password':  'La contraseña debe tener al menos 6 caracteres.',
         'auth/invalid-email':  'El formato del email no es válido.',
