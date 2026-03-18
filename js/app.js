@@ -18,7 +18,7 @@ import {
 } from './data.js';
 
 // ── App Version ─────────────────────────────────────
-const APP_VERSION = 'v1.3.20';
+const APP_VERSION = 'v1.3.21';
 
 // ── Avatar colors ────────────────────────────────────
 const AVATAR_COLORS = ['avatar-purple','avatar-red','avatar-green','avatar-yellow','avatar-orange','avatar-pink'];
@@ -1080,17 +1080,22 @@ class GymApp {
       const all = await getAll();
       const r   = all.find(x => x.id === routineId);
       if (!r) return;
+      const isTrainer = this.user?.role === 'trainer';
       const html = `
         ${r.notes ? `<div class="card card-sm" style="margin-bottom:16px;color:var(--text2);font-size:.88rem">📝 ${r.notes}</div>` : ''}
         <div class="exercise-list" style="background:var(--card);border-radius:var(--radius);overflow:hidden">
           ${r.exercises.map((ex,i) => {
             const m = getMuscleInfo(ex.muscleGroup);
+            const exDay = ex.day ? dayLabel(ex.day) : '';
             return `<div class="exercise-item" style="border-bottom:1px solid var(--border)">
               <span class="exercise-order">${i+1}</span>
               ${exerciseThumbHTML(ex, '60px', '1.8rem')}
-              <div class="exercise-info">
+              <div class="exercise-info" style="flex:1">
                 <div class="exercise-name" style="font-size:1rem">${ex.name}</div>
-                <div class="exercise-details">${m.label}${ex.rest ? ` · ⏱ ${ex.rest}s descanso` : ''}</div>
+                <div class="exercise-details">
+                  ${exDay ? `<span class="day-tag" style="font-size:.7rem;padding:2px 8px;margin-right:6px">${exDay}</span>` : ''}
+                  ${m.label}${ex.rest ? ` · ⏱ ${ex.rest}s descanso` : ''}
+                </div>
                 ${ex.setsData ? `
                   <div style="margin-top:8px;border:1px solid var(--border);border-radius:8px;overflow:hidden">
                     <div style="display:grid;grid-template-columns:40px 1fr 1fr;background:var(--bg2);padding:5px 8px;font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.4px">
@@ -1110,7 +1115,9 @@ class GymApp {
                     ${ex.weight ? `<span class="exercise-stat">⚖️ ${ex.weight}</span>` : ''}
                   </div>`}
                 ${ex.notes ? `<div style="color:var(--text2);font-size:.78rem;margin-top:6px">💡 ${ex.notes}</div>` : ''}
-              </div></div>`;
+              </div>
+              ${isTrainer ? `<button class="btn btn-outline btn-sm" style="padding:6px 8px;min-width:auto;flex-shrink:0" title="Duplicar a otro día" onclick="app.openDuplicateExerciseModal('${r.id}',${i})">📋</button>` : ''}
+            </div>`;
           }).join('')}
         </div>`;
       this.openModal(`📋 ${r.name}`, html, true);
@@ -1132,7 +1139,7 @@ class GymApp {
     const renderExList = () => this._builderExercises.map((ex,i) => {
       return `<div class="added-ex-item">${exerciseThumbHTML(ex, '40px', '1.2rem')}
         <div class="added-ex-info">
-          <div class="added-ex-name">${ex.name}</div>
+          <div class="added-ex-name">${ex.name} ${ex.day ? `<span class="day-tag" style="font-size:.65rem;padding:1px 6px;margin-left:4px">${dayLabel(ex.day)}</span>` : ''}</div>
           <div class="added-ex-params">${ex.sets} series · ${
             ex.setsData
               ? ex.setsData.map((s,i) => `<span style="color:var(--primary)">${i+1}:</span> ${s.reps||'?'} @ ${s.weight||'–'}`).join('  ')
@@ -1559,6 +1566,13 @@ class GymApp {
         </div>
 
         <div class="form-group">
+          <label>Día de la semana</label>
+          <select name="exDay" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;color:var(--text)">
+            <option value="">Sin día específico</option>
+            ${DAYS_OF_WEEK.map(d => `<option value="${d.key}">${d.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-group">
           <label>Notas específicas</label>
           <input type="text" name="notes" placeholder="Instrucciones adicionales para este ejercicio…"/>
         </div>
@@ -1600,6 +1614,7 @@ class GymApp {
 
       const resolvedMuscleGroup = muscleGroup === '__custom__' ? (ex.muscleGroup || 'core') : muscleGroup;
 
+      const exDay = fd.get('exDay') || '';
       this._builderExercises.push({
         id: uid(), exerciseId: ex.id || exerciseId, name: ex.name,
         muscleGroup: resolvedMuscleGroup,
@@ -1611,6 +1626,7 @@ class GymApp {
         weight: setsData.map(s => s.weight || '–').join(' / '),
         rest:   parseInt(fd.get('rest')) || 0,
         notes:  fd.get('notes') || '',
+        ...(exDay ? { day: exDay } : {}),
       });
 
       this.toast('✅ Ejercicio añadido');
@@ -1640,6 +1656,68 @@ class GymApp {
     this.closeModal();
     this.toast('Rutina eliminada', 'info');
     this.view === 'client-detail' ? this.navigate('client-detail', {clientId}) : this.navigate('rutinas');
+  }
+
+  async openDuplicateExerciseModal(routineId, exerciseIdx) {
+    const all = await (this.user.role === 'trainer'
+      ? DB.getRoutinesByTrainer(this.user.id)
+      : DB.getRoutinesByClient(this.user.id));
+    const routine = all.find(r => r.id === routineId);
+    if (!routine) return;
+    const ex = routine.exercises[exerciseIdx];
+    if (!ex) return;
+
+    this.openModal('Duplicar ejercicio', `
+      <div style="text-align:center;padding:10px 0 0">
+        <div style="font-size:1.1rem;font-weight:700;margin-bottom:4px">${ex.name}</div>
+        <div style="color:var(--text2);font-size:.85rem;margin-bottom:20px">Selecciona el día de destino para la copia</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:24px">
+          ${DAYS_OF_WEEK.map(d => `
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg2);transition:all .2s">
+              <input type="checkbox" name="dup-day" value="${d.key}" ${ex.day === d.key ? 'disabled' : ''}/>
+              <span style="${ex.day === d.key ? 'opacity:.5' : ''}">${d.label}</span>
+              ${ex.day === d.key ? '<span style="font-size:.7rem;color:var(--text3)">(actual)</span>' : ''}
+            </label>`).join('')}
+        </div>
+        <div class="form-actions" style="justify-content:center">
+          <button class="btn btn-ghost" onclick="app.openRoutineDetailModal('${routineId}')">Cancelar</button>
+          <button class="btn btn-primary" onclick="app._executeDuplicateExercise('${routineId}',${exerciseIdx})">📋 Duplicar</button>
+        </div>
+      </div>`);
+  }
+
+  async _executeDuplicateExercise(routineId, exerciseIdx) {
+    const selectedDays = [...document.querySelectorAll('[name="dup-day"]:checked')].map(cb => cb.value);
+    if (!selectedDays.length) { this.toast('Selecciona al menos un día', 'error'); return; }
+
+    const all = await (this.user.role === 'trainer'
+      ? DB.getRoutinesByTrainer(this.user.id)
+      : DB.getRoutinesByClient(this.user.id));
+    const routine = all.find(r => r.id === routineId);
+    if (!routine) return;
+    const ex = routine.exercises[exerciseIdx];
+    if (!ex) return;
+
+    // Create a copy of the exercise for each selected day
+    for (const dayKey of selectedDays) {
+      routine.exercises.push({
+        ...JSON.parse(JSON.stringify(ex)),
+        id: uid(),
+        day: dayKey,
+      });
+      // Also ensure the day is in the routine's daysOfWeek
+      if (!routine.daysOfWeek.includes(dayKey)) {
+        routine.daysOfWeek.push(dayKey);
+      }
+    }
+
+    try {
+      await DB.saveRoutine(routine);
+      this.toast(`Ejercicio duplicado a ${selectedDays.map(d => dayLabel(d)).join(', ')}`);
+      this.openRoutineDetailModal(routineId);
+    } catch (err) {
+      this.toast(err.message, 'error');
+    }
   }
 
   // ════════════════════════════════════════════════════
